@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>ジオゲ対策クイズ</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#f0f8ff">
+  <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f5fe.png">
+  <link rel="icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f5fe.png">
+
+  <style>
+    /* デザインは前回と同じ */
+    body { font-family: "Helvetica Neue", Arial, sans-serif; text-align: center; background-color: #f0f8ff; margin: 0; padding: 20px; color: #333; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
+    .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; min-height: 500px; display: flex; flex-direction: column; position: relative; }
+    input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: white; -webkit-appearance: none; appearance: none; }
+    .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: transform 0.1s; }
+    .btn:active { transform: scale(0.98); }
+    .btn-city { background: #00B900; }
+    .btn-tour { background: #E67E22; }
+    .btn-giveup { background: #6c757d; margin-top: 5px; }
+    .error { color: #dc3545; font-size: 14px; }
+    .hidden { display: none !important; }
+    .stats-bar { display: flex; justify-content: space-around; background: #333; color: white; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; }
+    .stats-item span { font-size: 18px; font-weight: bold; color: #ffc107; margin-left: 5px; }
+    .quiz-header { font-size: 14px; color: #666; margin-bottom: 5px; }
+    .quiz-text { font-size: 24px; font-weight: bold; margin: 15px 0; min-height: 1.2em; line-height: 1.4; }
+    .quiz-img { max-height: 200px; width: auto; max-width: 100%; border-radius: 8px; object-fit: contain; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .result-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.98); border-radius: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; }
+    .res-icon { font-size: 80px; margin-bottom: 10px; }
+    .res-text { font-size: 32px; font-weight: bold; margin-bottom: 20px; }
+    .correct-box { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 30px; width: 80%; }
+    .btn-next { width: 200px; }
+    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
+    .spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-bottom: 20px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="loading-overlay" class="loading-overlay hidden">
+    <div class="spinner"></div>
+    <div id="loading-text" style="font-size:18px; font-weight:bold;">読み込み中...</div>
+  </div>
+  <div id="login-screen" class="card">
+    <h1 style="color:#00B900;">ジオゲ対策クイズ</h1>
+    <p>LINEのアカウントでログイン</p>
+    <input type="text" id="login-name" placeholder="ニックネーム">
+    <input type="password" id="login-pass" placeholder="パスワード">
+    <p id="login-msg" class="error"></p>
+    <button class="btn" onclick="doLogin()">ログイン</button>
+  </div>
+  <div id="menu-screen" class="card hidden">
+    <div class="stats-bar" id="menu-stats"></div>
+    <h1>モード選択</h1>
+    <button class="btn btn-city" onclick="startGame('city')">🏙 市町村クイズ</button>
+    <button class="btn btn-tour" onclick="startGame('tourist')">⛩️ 観光地クイズ</button>
+    <button class="btn" style="background:#6c757d; margin-top:auto;" onclick="logout()">ログアウト</button>
+  </div>
+  <div id="game-screen" class="card hidden">
+    <div class="stats-bar" id="game-stats">
+      <div class="stats-item">正解数: <span id="st-correct">0</span></div>
+      <div class="stats-item">正解率: <span id="st-rate">0%</span></div>
+    </div>
+    <div id="quiz-area">
+      <div class="quiz-header">この場所がある都道府県は？</div>
+      <div id="q-img-container"></div>
+      <div class="quiz-text" id="q-text"></div>
+    </div>
+    <div style="margin-top: auto;">
+      <select id="answer-select"><option value="" disabled selected>都道府県を選択してください</option></select>
+      <button class="btn" onclick="submitAnswer()">回答する</button>
+      <button class="btn btn-giveup" onclick="giveUp()">🏳️ 分からない</button>
+      <div style="text-align:center; margin-top:15px;"><button class="btn" style="background:transparent; color:#999; border:none; width:auto; display:inline-block; font-size:12px; padding:5px;" onclick="backToMenu()">メインメニューへ戻る</button></div>
+    </div>
+    <div id="result-overlay" class="result-overlay hidden">
+      <div class="res-icon" id="res-icon"></div>
+      <div class="res-text" id="res-text"></div>
+      <div class="correct-box"><span style="font-size:12px; color:#666;">正解は...</span><br><span id="res-ans" style="font-size:28px; font-weight:bold; color:#007bff;"></span></div>
+      <button class="btn btn-next" onclick="nextQuestion()">次の問題へ ➡</button>
+    </div>
+  </div>
+
+  <script>
+    // ★★★ここにGASのURLを貼り付けてください！★★★
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzv0Gz2d0Ex0NDW8MHuHX6tCKqtGGsUfXrqhQFnar0F0Xw9y5RaFDKz13JZQTh_x2Nk/exec";
+    
+    // グローバル変数
+    let myUserId = null;
+    let appData = { stats: null, city: [], tourist: [] };
+    let currentMode = null;
+    let currentQuestion = null;
+    const prefectures = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
+
+    window.onload = function() {
+      // サービスワーカー登録（PWA化に必須）
+      if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+
+      const select = document.getElementById('answer-select');
+      prefectures.forEach(pref => {
+        const option = document.createElement('option');
+        option.value = pref; option.textContent = pref; select.appendChild(option);
+      });
+      const storedId = localStorage.getItem('quiz_app_userid');
+      if (storedId) {
+        myUserId = storedId;
+        // 自動ログイン
+        doLoginWithId(storedId);
+      } else {
+        document.getElementById('login-screen').classList.remove('hidden');
+      }
+    };
+
+    // --- 通信処理 (fetchを使用) ---
+    async function doLogin() {
+      const name = document.getElementById('login-name').value;
+      const pass = document.getElementById('login-pass').value;
+      if(!name || !pass) return alert("入力してください");
+      
+      showLoading("データをダウンロード中...");
+      
+      // GASへ通信: action=login
+      try {
+        const url = `${GAS_API_URL}?action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`;
+        const res = await fetch(url).then(r => r.json());
+        onDataLoaded(res);
+      } catch(e) {
+        hideLoading();
+        alert("通信エラー: " + e.message);
+      }
+    }
+
+    async function doLoginWithId(id) {
+      // IDログイン機能はGAS側が簡易実装のため、名前/パスが空だとエラーになる。
+      // 今回は一旦「ログイン画面に戻す」対応にします（安全策）
+      document.getElementById('login-screen').classList.remove('hidden');
+      
+      // ※もし自動ログインさせるなら、ローカルストレージに名前とパスワードも保存しておく必要があります。
+      // ここでは解説を簡単にするため、リロード時はログイン画面を出します。
+      // 「自動入力」させたい場合は input の value にセットしてください。
+    }
+
+    function onDataLoaded(res) {
+      hideLoading();
+      if (!res.success) {
+        alert(res.message);
+        document.getElementById('login-screen').classList.remove('hidden');
+        return;
+      }
+      myUserId = res.userId;
+      localStorage.setItem('quiz_app_userid', myUserId);
+      appData.stats = res.stats;
+      appData.city = res.masterData.city;
+      appData.tourist = res.masterData.tourist;
+      showMenu();
+    }
+
+    async function syncScore(isCorrect) {
+      // 裏で送信
+      const url = `${GAS_API_URL}?action=sync&userId=${myUserId}&mode=${currentMode}&isCorrect=${isCorrect}`;
+      try {
+        const res = await fetch(url).then(r => r.json());
+        if(res) appData.stats = res;
+      } catch(e) { console.error(e); }
+    }
+
+    // --- 以降、UI操作（前回とほぼ同じ） ---
+    function hideAll() { ['login-screen','menu-screen','game-screen'].forEach(id=>document.getElementById(id).classList.add('hidden')); }
+    function showLoading(msg) { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-overlay').classList.remove('hidden'); }
+    function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
+    
+    function showMenu() {
+      hideAll(); document.getElementById('menu-screen').classList.remove('hidden');
+      const s = appData.stats;
+      if(s) document.getElementById('menu-stats').innerHTML = `<div class="stats-item">正解数: <span>${s.total.correct}</span></div><div class="stats-item">正解率: <span>${s.total.rate}%</span></div>`;
+    }
+
+    function startGame(mode) {
+      currentMode = mode;
+      const dataset = (mode === 'city') ? appData.city : appData.tourist;
+      if (!dataset || dataset.length === 0) return alert("データがありません");
+      nextQuestion();
+      hideAll(); document.getElementById('game-screen').classList.remove('hidden'); document.getElementById('result-overlay').classList.add('hidden');
+    }
+    
+    function backToMenu() { showMenu(); }
+    function logout() { localStorage.removeItem('quiz_app_userid'); location.reload(); }
+
+    function nextQuestion() {
+      const dataset = (currentMode === 'city') ? appData.city : appData.tourist;
+      const randIndex = Math.floor(Math.random() * dataset.length);
+      currentQuestion = dataset[randIndex];
+      
+      document.getElementById('result-overlay').classList.add('hidden');
+      document.getElementById('answer-select').selectedIndex = 0;
+      document.getElementById('q-text').innerText = currentQuestion.q;
+      document.getElementById('q-img-container').innerHTML = currentQuestion.i ? `<img src="${currentQuestion.i}" class="quiz-img">` : '';
+      
+      const s = appData.stats[currentMode];
+      document.getElementById('st-correct').innerText = s.correct + '/' + s.total;
+      document.getElementById('st-rate').innerText = s.rate + '%';
+    }
+
+    function submitAnswer() {
+      const v = document.getElementById('answer-select').value;
+      if(!v) return alert("選択してください");
+      processAnswer(v);
+    }
+    function giveUp() { processAnswer("GIVE_UP"); }
+
+    function processAnswer(ans) {
+      const isCorrect = (ans === currentQuestion.a);
+      updateLocalStats(isCorrect);
+      showResult(isCorrect, currentQuestion.a);
+      syncScore(isCorrect);
+    }
+
+    function updateLocalStats(isCorrect) {
+      const s = appData.stats[currentMode]; s.total++; if(isCorrect) s.correct++;
+      s.rate = (s.total>0) ? ((s.correct/s.total)*100).toFixed(1) : "0.0";
+      const t = appData.stats.total; t.total++; if(isCorrect) t.correct++;
+      t.rate = (t.total>0) ? ((t.correct/t.total)*100).toFixed(1) : "0.0";
+    }
+
+    function showResult(isCorrect, ans) {
+      const overlay = document.getElementById('result-overlay');
+      const icon = document.getElementById('res-icon');
+      const text = document.getElementById('res-text');
+      overlay.classList.remove('hidden');
+      if(isCorrect) { icon.innerText = '⭕'; text.innerText = '正解！'; text.style.color = '#28a745'; }
+      else { icon.innerText = '❌'; text.innerText = '残念...'; text.style.color = '#dc3545'; }
+      document.getElementById('res-ans').innerText = ans;
+    }
+  </script>
+</body>
+</html>

@@ -14,7 +14,7 @@
   <link rel="icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f5fe.png">
 
   <style>
-    /* デザインは前回と同じ */
+    /* デザイン設定 */
     body { font-family: "Helvetica Neue", Arial, sans-serif; text-align: center; background-color: #f0f8ff; margin: 0; padding: 20px; color: #333; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
     .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; min-height: 500px; display: flex; flex-direction: column; position: relative; }
     input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: white; -webkit-appearance: none; appearance: none; }
@@ -41,18 +41,20 @@
   </style>
 </head>
 <body>
+
   <div id="loading-overlay" class="loading-overlay hidden">
     <div class="spinner"></div>
     <div id="loading-text" style="font-size:18px; font-weight:bold;">読み込み中...</div>
   </div>
+
   <div id="login-screen" class="card">
     <h1 style="color:#00B900;">ジオゲ対策クイズ</h1>
-    <p>LINEのアカウントでログイン</p>
-    <input type="text" id="login-name" placeholder="ニックネーム">
+    <p>登録したアカウントでログイン</p> <input type="text" id="login-name" placeholder="ニックネーム">
     <input type="password" id="login-pass" placeholder="パスワード">
     <p id="login-msg" class="error"></p>
-    <button class="btn" onclick="doLogin()">ログイン</button>
+    <button class="btn" onclick="manualLogin()">ログイン</button>
   </div>
+
   <div id="menu-screen" class="card hidden">
     <div class="stats-bar" id="menu-stats"></div>
     <h1>モード選択</h1>
@@ -60,6 +62,7 @@
     <button class="btn btn-tour" onclick="startGame('tourist')">⛩️ 観光地クイズ</button>
     <button class="btn" style="background:#6c757d; margin-top:auto;" onclick="logout()">ログアウト</button>
   </div>
+
   <div id="game-screen" class="card hidden">
     <div class="stats-bar" id="game-stats">
       <div class="stats-item">正解数: <span id="st-correct">0</span></div>
@@ -95,8 +98,8 @@
     let currentQuestion = null;
     const prefectures = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
 
+    // --- 初期化 ---
     window.onload = function() {
-      // サービスワーカー登録（PWA化に必須）
       if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
 
       const select = document.getElementById('answer-select');
@@ -104,70 +107,88 @@
         const option = document.createElement('option');
         option.value = pref; option.textContent = pref; select.appendChild(option);
       });
-      const storedId = localStorage.getItem('quiz_app_userid');
-      if (storedId) {
-        myUserId = storedId;
-        // 自動ログイン
-        doLoginWithId(storedId);
+
+      // ★自動ログイン処理
+      const storedName = localStorage.getItem('quiz_app_name');
+      const storedPass = localStorage.getItem('quiz_app_pass');
+
+      if (storedName && storedPass) {
+        // 保存情報があれば、ログイン画面を出さずに裏で認証へ
+        performLogin(storedName, storedPass);
       } else {
+        // なければログイン画面表示
         document.getElementById('login-screen').classList.remove('hidden');
       }
     };
 
-    // --- 通信処理 (fetchを使用) ---
-    async function doLogin() {
+    // --- 手動ログイン ---
+    function manualLogin() {
       const name = document.getElementById('login-name').value;
       const pass = document.getElementById('login-pass').value;
       if(!name || !pass) return alert("入力してください");
       
+      // 成功したら保存するために引数で渡す
+      performLogin(name, pass, true);
+    }
+
+    // --- ログイン実行 (共通) ---
+    async function performLogin(name, pass, isManual = false) {
       showLoading("データをダウンロード中...");
       
-      // GASへ通信: action=login
       try {
         const url = `${GAS_API_URL}?action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`;
         const res = await fetch(url).then(r => r.json());
-        onDataLoaded(res);
+        
+        onDataLoaded(res, name, pass);
       } catch(e) {
         hideLoading();
         alert("通信エラー: " + e.message);
+        document.getElementById('login-screen').classList.remove('hidden');
       }
     }
 
-    async function doLoginWithId(id) {
-      // IDログイン機能はGAS側が簡易実装のため、名前/パスが空だとエラーになる。
-      // 今回は一旦「ログイン画面に戻す」対応にします（安全策）
-      document.getElementById('login-screen').classList.remove('hidden');
-      
-      // ※もし自動ログインさせるなら、ローカルストレージに名前とパスワードも保存しておく必要があります。
-      // ここでは解説を簡単にするため、リロード時はログイン画面を出します。
-      // 「自動入力」させたい場合は input の value にセットしてください。
-    }
-
-    function onDataLoaded(res) {
+    function onDataLoaded(res, name, pass) {
       hideLoading();
       if (!res.success) {
-        alert(res.message);
+        // 自動ログイン失敗時などは、ログイン画面に戻してエラー表示
+        document.getElementById('login-msg').innerText = res.message;
         document.getElementById('login-screen').classList.remove('hidden');
         return;
       }
+
+      // ★成功したら、認証情報を保存（次回からの自動ログイン用）
+      localStorage.setItem('quiz_app_userid', res.userId);
+      localStorage.setItem('quiz_app_name', name);
+      localStorage.setItem('quiz_app_pass', pass);
+
       myUserId = res.userId;
-      localStorage.setItem('quiz_app_userid', myUserId);
       appData.stats = res.stats;
       appData.city = res.masterData.city;
       appData.tourist = res.masterData.tourist;
+      
+      // ログイン画面は隠してメニューへ
+      document.getElementById('login-screen').classList.add('hidden');
       showMenu();
     }
 
+    // --- ログアウト ---
+    function logout() { 
+      // 保存情報を全削除
+      localStorage.removeItem('quiz_app_userid'); 
+      localStorage.removeItem('quiz_app_name'); 
+      localStorage.removeItem('quiz_app_pass'); 
+      location.reload(); 
+    }
+
+    // --- 以降、ゲームロジック（変更なし） ---
     async function syncScore(isCorrect) {
-      // 裏で送信
       const url = `${GAS_API_URL}?action=sync&userId=${myUserId}&mode=${currentMode}&isCorrect=${isCorrect}`;
       try {
         const res = await fetch(url).then(r => r.json());
         if(res) appData.stats = res;
       } catch(e) { console.error(e); }
     }
-
-    // --- 以降、UI操作（前回とほぼ同じ） ---
+    
     function hideAll() { ['login-screen','menu-screen','game-screen'].forEach(id=>document.getElementById(id).classList.add('hidden')); }
     function showLoading(msg) { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-overlay').classList.remove('hidden'); }
     function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
@@ -187,7 +208,6 @@
     }
     
     function backToMenu() { showMenu(); }
-    function logout() { localStorage.removeItem('quiz_app_userid'); location.reload(); }
 
     function nextQuestion() {
       const dataset = (currentMode === 'city') ? appData.city : appData.tourist;

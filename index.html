@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>ジオゲ対策クイズ</title>
+  
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,7 +14,7 @@
   <link rel="icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f5fe.png">
 
   <style>
-    /* スタイルも変更なし */
+    /* スタイル変更なし */
     body { font-family: "Helvetica Neue", Arial, sans-serif; text-align: center; background-color: #f0f8ff; margin: 0; padding: 20px; color: #333; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
     .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; min-height: 500px; display: flex; flex-direction: column; position: relative; }
     input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: white; -webkit-appearance: none; appearance: none; }
@@ -53,6 +54,7 @@
     <div class="spinner"></div>
     <div id="loading-text" style="font-size:18px; font-weight:bold;">読み込み中...</div>
   </div>
+
   <div id="login-screen" class="card">
     <h1 style="color:#00B900;">ジオゲ対策クイズ</h1>
     <p>登録したアカウントでログイン</p>
@@ -61,28 +63,35 @@
     <p id="login-msg" class="error"></p>
     <button class="btn" onclick="manualLogin()">ログイン</button>
   </div>
+
   <div id="menu-screen" class="card hidden">
     <div class="stats-bar" id="menu-stats"></div>
     <h1>モード選択</h1>
     <button class="btn btn-city" onclick="startGame('city')">🏙 市町村クイズ</button>
     <button class="btn btn-tour" onclick="startGame('tourist')">⛩️ 観光地クイズ</button>
+    
     <div style="display:flex; gap:10px; margin-top:10px;">
-      <button class="btn btn-review" onclick="startReview()" style="flex:1;">🔥 復習する (<span id="review-count">0</span>)</button>
+      <button class="btn btn-review" onclick="startReview()" style="flex:1;">🔥 復習する</button>
       <button class="btn btn-stats" onclick="showStatsDetail()" style="flex:1;">📊 統計データ</button>
     </div>
+
     <button class="btn" style="background:#6c757d; margin-top:auto;" onclick="logout()">ログアウト</button>
   </div>
+
   <div id="stats-detail-screen" class="card hidden">
     <h2 style="margin-top:0;">📊 プレイデータ</h2>
     <div id="stats-content"></div>
     <button class="btn" onclick="backToMenu()">戻る</button>
   </div>
+
   <div id="game-screen" class="card hidden">
     <div class="stats-bar" id="game-stats">
       <div class="stats-item">正解数: <span id="st-correct">0</span></div>
       <div class="stats-item">正解率: <span id="st-rate">0%</span></div>
     </div>
+    
     <div id="review-banner" class="hidden" style="background:#dc3545; color:white; font-size:12px; padding:2px; margin-bottom:5px; border-radius:4px;">🔥 復習モード中</div>
+
     <div id="quiz-area">
       <div class="quiz-header">この場所がある都道府県は？</div>
       <div id="q-img-container"></div>
@@ -94,6 +103,7 @@
       <button class="btn btn-giveup" onclick="giveUp()">🏳️ 分からない</button>
       <div style="text-align:center; margin-top:15px;"><button class="btn" style="background:transparent; color:#999; border:none; width:auto; display:inline-block; font-size:12px; padding:5px;" onclick="backToMenu()">メインメニューへ戻る</button></div>
     </div>
+
     <div id="result-overlay" class="result-overlay hidden">
       <div class="res-icon" id="res-icon"></div>
       <div class="res-text" id="res-text"></div>
@@ -110,7 +120,9 @@
     let appData = { stats: null, city: [], tourist: [] };
     let currentMode = null;
     let currentQuestion = null;
-    let wrongList = []; // ★クラウド同期するリスト
+    
+    // ★最初はリストを持たない（null）
+    let wrongList = null; 
 
     const prefectures = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
 
@@ -163,19 +175,54 @@
       appData.city = res.masterData.city;
       appData.tourist = res.masterData.tourist;
       
-      // ★クラウドから取得した「間違えたリスト」をセット
-      // (もし初回でnullなら空配列)
-      wrongList = res.wrongList || [];
+      // ★ログイン時はリストを取らないのでnullのまま
+      wrongList = null;
       
       document.getElementById('login-screen').classList.add('hidden');
       showMenu();
     }
 
-    // --- 同期処理（スコア ＋ 間違いリスト） ---
-    async function syncScore(isCorrect) {
-      // JSON文字列にして送信
-      const wrongListStr = encodeURIComponent(JSON.stringify(wrongList));
-      const url = `${GAS_API_URL}?action=sync&userId=${myUserId}&mode=${currentMode}&isCorrect=${isCorrect}&wrongList=${wrongListStr}`;
+    // --- ★復習ボタンが押されたときの処理 ---
+    async function startReview() {
+      // 1. リストをまだ持っていない場合、サーバーに取りに行く
+      if (wrongList === null) {
+        showLoading("復習データを取得中...");
+        try {
+          const url = `${GAS_API_URL}?action=getWrongList&userId=${myUserId}`;
+          const res = await fetch(url).then(r => r.json());
+          
+          if (res.wrongList) {
+            wrongList = res.wrongList;
+          } else {
+            throw new Error("取得失敗");
+          }
+          hideLoading();
+        } catch(e) {
+          hideLoading();
+          alert("データ取得エラー: " + e.message);
+          return;
+        }
+      }
+      
+      // 2. リストが空なら終了
+      if (wrongList.length === 0) return alert("復習する問題がありません！優秀！");
+      
+      // 3. ゲーム開始
+      currentMode = 'review';
+      document.getElementById('review-banner').classList.remove('hidden');
+      nextQuestion();
+      hideAll(); 
+      document.getElementById('game-screen').classList.remove('hidden'); 
+      document.getElementById('result-overlay').classList.add('hidden');
+    }
+
+    // --- 同期処理（差分送信） ---
+    async function syncScore(isCorrect, syncType, wrongId) {
+      // isCorrect: true/false
+      // syncType: 'add' or 'remove' or 'none'
+      // wrongId: 問題のキー
+      
+      const url = `${GAS_API_URL}?action=sync&userId=${myUserId}&mode=${currentMode}&isCorrect=${isCorrect}&syncType=${syncType}&wrongId=${encodeURIComponent(wrongId)}`;
       
       try {
         const res = await fetch(url).then(r => r.json());
@@ -183,7 +230,7 @@
       } catch(e) { console.error(e); }
     }
     
-    // --- 以下、UIロジック ---
+    // --- UI系 ---
     function hideAll() { ['login-screen','menu-screen','game-screen','stats-detail-screen'].forEach(id=>document.getElementById(id).classList.add('hidden')); }
     function showLoading(msg) { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-overlay').classList.remove('hidden'); }
     function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
@@ -193,7 +240,6 @@
       document.getElementById('menu-screen').classList.remove('hidden');
       const s = appData.stats;
       if(s) document.getElementById('menu-stats').innerHTML = `<div class="stats-item">正解数: <span>${s.total.correct}</span></div><div class="stats-item">正解率: <span>${s.total.rate}%</span></div>`;
-      document.getElementById('review-count').innerText = wrongList.length;
     }
 
     function showStatsDetail() {
@@ -220,14 +266,6 @@
       nextQuestion();
       hideAll(); document.getElementById('game-screen').classList.remove('hidden'); document.getElementById('result-overlay').classList.add('hidden');
     }
-
-    function startReview() {
-      if (wrongList.length === 0) return alert("復習する問題がありません！優秀！");
-      currentMode = 'review';
-      document.getElementById('review-banner').classList.remove('hidden');
-      nextQuestion();
-      hideAll(); document.getElementById('game-screen').classList.remove('hidden'); document.getElementById('result-overlay').classList.add('hidden');
-    }
     
     function backToMenu() { showMenu(); }
     function logout() { localStorage.removeItem('quiz_app_userid'); localStorage.removeItem('quiz_app_name'); localStorage.removeItem('quiz_app_pass'); location.reload(); }
@@ -235,12 +273,16 @@
     function nextQuestion() {
       let q = null;
       if (currentMode === 'review') {
-        if (wrongList.length === 0) { alert("復習完了！メニューに戻ります。"); return backToMenu(); }
+        if (!wrongList || wrongList.length === 0) { alert("復習完了！メニューに戻ります。"); return backToMenu(); }
         const randKey = wrongList[Math.floor(Math.random() * wrongList.length)];
         q = appData.city.find(item => (item.q + "_" + item.a) === randKey);
         if (!q) q = appData.tourist.find(item => (item.q + "_" + item.a) === randKey);
         
-        if (!q) { wrongList = wrongList.filter(k => k !== randKey); return nextQuestion(); }
+        if (!q) { 
+          // データ不整合時
+          wrongList = wrongList.filter(k => k !== randKey); 
+          return nextQuestion(); 
+        }
         document.getElementById('st-correct').innerText = "-"; document.getElementById('st-rate').innerText = "復習";
       } else {
         const dataset = (currentMode === 'city') ? appData.city : appData.tourist;
@@ -266,21 +308,31 @@
     function processAnswer(ans) {
       const isCorrect = (ans === currentQuestion.a);
       const qKey = currentQuestion.q + "_" + currentQuestion.a;
+      let syncType = 'none';
 
       if (currentMode === 'review') {
         if (isCorrect) {
+          // 復習成功 -> ローカルリストから削除 & サーバーへ削除命令
           wrongList = wrongList.filter(k => k !== qKey);
-          // 復習完了も同期する（削除を通知）
-          syncScore(true); // スコアは増えないがリスト同期のために呼ぶ
+          syncType = 'remove';
         }
       } else {
         updateLocalStats(isCorrect);
         if (!isCorrect) {
-          if (!wrongList.includes(qKey)) { wrongList.push(qKey); }
+          // 通常モード失敗 -> サーバーへ追加命令
+          // (ローカルリストを持っているなら追加するが、持っていなければ何もしない＝整合性維持)
+          if (wrongList) {
+             if (!wrongList.includes(qKey)) wrongList.push(qKey);
+          }
+          syncType = 'add';
         }
-        syncScore(isCorrect);
       }
+      
+      // 結果表示
       showResult(isCorrect, currentQuestion.a);
+      
+      // 裏で同期（差分のみ）
+      syncScore(isCorrect, syncType, qKey);
     }
 
     function updateLocalStats(isCorrect) {

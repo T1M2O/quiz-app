@@ -27,6 +27,7 @@
     .btn-stats { background: #6f42c1; }
     .btn-giveup { background: #6c757d; margin-top: 5px; }
     .btn-dummy { background: #e0e0e0; color: #888; cursor: not-allowed; }
+    .btn-choice { background: #f8f9fa; color: #333; border: 2px solid #007bff; }
     
     .hidden { display: none !important; }
     .stats-bar { display: flex; justify-content: space-around; background: #333; color: white; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; }
@@ -49,28 +50,22 @@
     .news-item { margin-bottom: 4px; color: #555; }
     .news-date { font-weight: bold; margin-right: 5px; color: #856404; }
 
-    /* 設定ボタン（歯車） */
+    /* モーダル系 */
     .settings-icon { position: absolute; top: 15px; left: 15px; font-size: 24px; cursor: pointer; z-index: 100; transition: transform 0.3s; }
     .settings-icon:active { transform: rotate(90deg); }
-
-    /* モーダル用スタイル (自作Alert・設定画面用) */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; justify-content: center; align-items: center; }
     .modal-content { background: white; width: 85%; max-width: 320px; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.2s ease-out; }
     @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     
-    /* 設定メニューリスト */
     .settings-list { list-style: none; padding: 0; margin: 0; text-align: left; }
     .settings-list li { padding: 15px 5px; border-bottom: 1px solid #eee; font-size: 16px; display: flex; align-items: center; cursor: pointer; }
     .settings-list li:last-child { border-bottom: none; }
     .settings-list li span.icon { margin-right: 10px; font-size: 20px; }
     .disabled-item { color: #aaa; cursor: not-allowed; }
-
-    /* ロード画面 */
     .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
     .spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-bottom: 20px; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* 統計用 */
     .stats-card { text-align: left; background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #007bff; }
     .progress-bg { background: #e9ecef; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 5px; }
     .progress-bar { height: 100%; width: 0%; transition: width 0.5s; }
@@ -127,7 +122,6 @@
 
   <div id="menu-screen" class="card hidden">
     <div class="settings-icon" onclick="openSettings()">⚙️</div>
-
     <div class="stats-bar" id="menu-stats" style="margin-top:30px;"></div>
     
     <div id="news-box" class="news-box hidden">
@@ -160,14 +154,26 @@
     <div id="review-banner" class="hidden" style="background:#dc3545; color:white; font-size:12px; padding:2px; margin-bottom:5px; border-radius:4px;">🔥 復習モード中</div>
 
     <div id="quiz-area">
-      <div class="quiz-header">この場所がある都道府県は？</div>
+      <div class="quiz-header" id="q-header">この場所がある都道府県は？</div>
       <div id="q-img-container"></div>
       <div class="quiz-text" id="q-text"></div>
     </div>
+    
     <div style="margin-top: auto;">
-      <select id="answer-select"><option value="" disabled selected>都道府県を選択してください</option></select>
-      <button class="btn" onclick="submitAnswer()">回答する</button>
-      <button class="btn btn-giveup" onclick="giveUp()">🏳️ 分からない</button>
+      
+      <div id="normal-answer-area">
+        <select id="answer-select"><option value="" disabled selected>都道府県を選択してください</option></select>
+        <button class="btn" onclick="submitAnswer()">回答する</button>
+        <button class="btn btn-giveup" onclick="giveUp()">🏳️ 分からない</button>
+      </div>
+
+      <div id="hidden-answer-area" class="hidden">
+        <button class="btn btn-choice" id="btn-choice-0" onclick="submitHiddenAnswer(0)"></button>
+        <button class="btn btn-choice" id="btn-choice-1" onclick="submitHiddenAnswer(1)"></button>
+        <button class="btn btn-choice" id="btn-choice-2" onclick="submitHiddenAnswer(2)"></button>
+        <button class="btn btn-choice" id="btn-choice-3" onclick="submitHiddenAnswer(3)"></button>
+      </div>
+
       <div style="text-align:center; margin-top:15px;"><button class="btn" style="background:transparent; color:#999; border:none; width:auto; display:inline-block; font-size:12px; padding:5px;" onclick="backToMenu()">メインメニューへ戻る</button></div>
     </div>
 
@@ -179,7 +185,7 @@
         <span id="res-ans" style="font-size:28px; font-weight:bold; color:#007bff; display:block; margin-bottom:10px;"></span>
       </div>
       
-      <div style="display:flex; gap:10px; width:90%; margin-bottom: 20px;">
+      <div id="link-container" style="display:flex; gap:10px; width:90%; margin-bottom: 20px;">
         <a id="link-map" target="_blank" class="btn" style="background:#4285F4; flex:1; margin:0; padding:10px 0; font-size:14px;">🗺️ GoogleMap</a>
         <a id="link-wiki" target="_blank" class="btn" style="background:#333; flex:1; margin:0; padding:10px 0; font-size:14px;">📖 Wikipedia</a>
       </div>
@@ -193,10 +199,11 @@
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzv0Gz2d0Ex0NDW8MHuHX6tCKqtGGsUfXrqhQFnar0F0Xw9y5RaFDKz13JZQTh_x2Nk/exec";
     
     let myUserId = null;
-    let appData = { stats: null, city: [], tourist: [], news: [] };
+    let appData = { stats: null, city: [], tourist: [], news: [], hidden: [] };
     let currentMode = null;
     let currentQuestion = null;
     let wrongList = null; 
+    let currentChoices = []; // 4択シャッフル用
 
     const prefectures = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
 
@@ -213,14 +220,12 @@
       else { document.getElementById('login-screen').classList.remove('hidden'); }
     };
 
-    // --- 自作アラート ---
     function myAlert(msg) {
       document.getElementById('alert-msg').innerText = msg;
       document.getElementById('custom-alert').classList.remove('hidden');
     }
     function closeAlert() { document.getElementById('custom-alert').classList.add('hidden'); }
 
-    // --- 設定＆管理者メニュー ---
     function openSettings() { document.getElementById('settings-modal').classList.remove('hidden'); }
     function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
     
@@ -231,15 +236,30 @@
     }
     function closeAdmin() { document.getElementById('admin-modal').classList.add('hidden'); }
     
-    function checkAdmin() {
+    // ★ 管理者パスワードの照会
+    async function checkAdmin() {
       const pass = document.getElementById('admin-pass-input').value;
       if (!pass) return myAlert("キーを入力してください");
       
-      closeAdmin();
-      myAlert(`入力されたキー [ ${pass} ] は登録されていません。`);
+      showLoading("認証中...");
+      try {
+        const url = `${GAS_API_URL}?action=checkAdmin&pass=${encodeURIComponent(pass)}`;
+        const res = await fetch(url).then(r => r.json());
+        hideLoading();
+        closeAdmin();
+        
+        if (res.success) {
+          appData.hidden = res.hiddenQuiz;
+          startHiddenQuiz(); // 隠しクイズ起動！
+        } else {
+          myAlert(res.message);
+        }
+      } catch(e) {
+        hideLoading();
+        myAlert("通信エラーが発生しました。");
+      }
     }
 
-    // --- ログイン・通信系 ---
     function manualLogin() {
       const name = document.getElementById('login-name').value;
       const pass = document.getElementById('login-pass').value;
@@ -255,7 +275,7 @@
         onDataLoaded(res, name, pass);
       } catch(e) {
         hideLoading();
-        myAlert("通信エラーが発生しました。電波の良いところで再度お試しください。");
+        myAlert("通信エラーが発生しました。");
         document.getElementById('login-screen').classList.remove('hidden');
       }
     }
@@ -282,11 +302,9 @@
       showMenu();
     }
 
-    // --- メニュー表示 ---
     function showMenu() {
       hideAll(); 
       document.getElementById('menu-screen').classList.remove('hidden');
-      
       const s = appData.stats;
       if(s) document.getElementById('menu-stats').innerHTML = `<div class="stats-item">正解数: <span>${s.total.correct}</span></div><div class="stats-item">正解率: <span>${s.total.rate}%</span></div>`;
       
@@ -295,34 +313,35 @@
       if (appData.news && appData.news.length > 0) {
         newsBox.classList.remove('hidden');
         let html = '';
-        appData.news.forEach(n => {
-          html += `<div class="news-item"><span class="news-date">${n.date}</span> ${n.msg}</div>`;
-        });
+        appData.news.forEach(n => { html += `<div class="news-item"><span class="news-date">${n.date}</span> ${n.msg}</div>`; });
         newsList.innerHTML = html;
       } else {
         newsBox.classList.add('hidden');
       }
     }
 
-    // --- 復習スタート ---
     async function startReview() {
       if (wrongList === null) {
         showLoading("復習データを取得中...");
         try {
           const url = `${GAS_API_URL}?action=getWrongList&userId=${myUserId}`;
           const res = await fetch(url).then(r => r.json());
-          if (res.wrongList) { wrongList = res.wrongList; } 
-          else { throw new Error("取得失敗"); }
+          if (res.wrongList) { wrongList = res.wrongList; } else { throw new Error(); }
           hideLoading();
-        } catch(e) {
-          hideLoading();
-          return myAlert("データ取得エラーが発生しました。");
-        }
+        } catch(e) { hideLoading(); return myAlert("データ取得エラーが発生しました。"); }
       }
       if (wrongList.length === 0) return myAlert("復習する問題がありません！優秀！");
       
       currentMode = 'review';
       document.getElementById('review-banner').classList.remove('hidden');
+      nextQuestion();
+      hideAll(); document.getElementById('game-screen').classList.remove('hidden'); document.getElementById('result-overlay').classList.add('hidden');
+    }
+
+    // ★ 隠しクイズスタート処理
+    function startHiddenQuiz() {
+      currentMode = 'hidden';
+      document.getElementById('review-banner').classList.add('hidden');
       nextQuestion();
       hideAll(); 
       document.getElementById('game-screen').classList.remove('hidden'); 
@@ -330,14 +349,14 @@
     }
 
     async function syncScore(isCorrect, syncType, wrongId) {
+      if (currentMode === 'hidden') return; // 隠しクイズは成績同期しない
       const url = `${GAS_API_URL}?action=sync&userId=${myUserId}&mode=${currentMode}&isCorrect=${isCorrect}&syncType=${syncType}&wrongId=${encodeURIComponent(wrongId)}`;
       try {
         const res = await fetch(url).then(r => r.json());
         if(res) appData.stats = res;
-      } catch(e) { console.error(e); }
+      } catch(e) {}
     }
     
-    // --- UI補助 ---
     function hideAll() { ['login-screen','menu-screen','game-screen','stats-detail-screen'].forEach(id=>document.getElementById(id).classList.add('hidden')); }
     function showLoading(msg) { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-overlay').classList.remove('hidden'); }
     function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
@@ -368,12 +387,38 @@
 
     function nextQuestion() {
       let q = null;
-      if (currentMode === 'review') {
+      
+      // UIの切り替え
+      if (currentMode === 'hidden') {
+        document.getElementById('normal-answer-area').classList.add('hidden');
+        document.getElementById('hidden-answer-area').classList.remove('hidden');
+        document.getElementById('q-header').innerText = "㊙️ 隠しクイズ ㊙️";
+        document.getElementById('st-correct').innerText = "㊙️"; 
+        document.getElementById('st-rate').innerText = "隠れ";
+      } else {
+        document.getElementById('normal-answer-area').classList.remove('hidden');
+        document.getElementById('hidden-answer-area').classList.add('hidden');
+        document.getElementById('q-header').innerText = "この場所がある都道府県は？";
+      }
+
+      if (currentMode === 'hidden') {
+        const randIndex = Math.floor(Math.random() * appData.hidden.length);
+        q = appData.hidden[randIndex];
+        
+        // 4択シャッフル
+        currentChoices = [q.a, q.w1, q.w2, q.w3];
+        for (let i = currentChoices.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [currentChoices[i], currentChoices[j]] = [currentChoices[j], currentChoices[i]];
+        }
+        for (let i = 0; i < 4; i++) {
+          document.getElementById('btn-choice-' + i).innerText = currentChoices[i];
+        }
+
+      } else if (currentMode === 'review') {
         if (!wrongList || wrongList.length === 0) { myAlert("復習完了！メニューに戻ります。"); return backToMenu(); }
         const randKey = wrongList[Math.floor(Math.random() * wrongList.length)];
-        q = appData.city.find(item => (item.q + "_" + item.a) === randKey);
-        if (!q) q = appData.tourist.find(item => (item.q + "_" + item.a) === randKey);
-        
+        q = appData.city.find(item => (item.q + "_" + item.a) === randKey) || appData.tourist.find(item => (item.q + "_" + item.a) === randKey);
         if (!q) { wrongList = wrongList.filter(k => k !== randKey); return nextQuestion(); }
         document.getElementById('st-correct').innerText = "-"; document.getElementById('st-rate').innerText = "復習";
       } else {
@@ -383,6 +428,7 @@
         const s = appData.stats[currentMode];
         document.getElementById('st-correct').innerText = s.correct + '/' + s.total; document.getElementById('st-rate').innerText = s.rate + '%';
       }
+
       currentQuestion = q;
       document.getElementById('result-overlay').classList.add('hidden');
       document.getElementById('answer-select').selectedIndex = 0;
@@ -390,24 +436,34 @@
       document.getElementById('q-img-container').innerHTML = currentQuestion.i ? `<img src="${currentQuestion.i}" class="quiz-img">` : '';
     }
 
+    // 通常回答用
     function submitAnswer() {
       const v = document.getElementById('answer-select').value;
       if(!v) return myAlert("都道府県を選択してください");
       processAnswer(v);
     }
     function giveUp() { processAnswer("GIVE_UP"); }
+    
+    // 隠しクイズ4択回答用
+    function submitHiddenAnswer(index) {
+      processAnswer(currentChoices[index]);
+    }
 
     function processAnswer(ans) {
       const isCorrect = (ans === currentQuestion.a);
-      const qKey = currentQuestion.q + "_" + currentQuestion.a;
       let syncType = 'none';
+      let qKey = "";
 
-      if (currentMode === 'review') {
+      if (currentMode === 'hidden') {
+        // 隠しクイズは成績反映しない
+      } else if (currentMode === 'review') {
+        qKey = currentQuestion.q + "_" + currentQuestion.a;
         if (isCorrect) {
           wrongList = wrongList.filter(k => k !== qKey);
           syncType = 'remove';
         }
       } else {
+        qKey = currentQuestion.q + "_" + currentQuestion.a;
         updateLocalStats(isCorrect);
         if (!isCorrect) {
           if (wrongList) { if (!wrongList.includes(qKey)) wrongList.push(qKey); }
@@ -416,7 +472,7 @@
       }
       
       showResult(isCorrect, currentQuestion.a);
-      syncScore(isCorrect, syncType, qKey);
+      if (currentMode !== 'hidden') syncScore(isCorrect, syncType, qKey);
     }
 
     function updateLocalStats(isCorrect) {
@@ -436,9 +492,15 @@
       
       document.getElementById('res-ans').innerText = ans;
 
-      const searchQuery = currentQuestion.a + " " + currentQuestion.n; 
-      document.getElementById('link-map').href = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(searchQuery);
-      document.getElementById('link-wiki').href = "https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.n);
+      // Wiki/Mapリンクの制御（隠しクイズは無効化）
+      if (currentMode === 'hidden') {
+        document.getElementById('link-container').classList.add('hidden');
+      } else {
+        document.getElementById('link-container').classList.remove('hidden');
+        const searchQuery = currentQuestion.a + " " + currentQuestion.n; 
+        document.getElementById('link-map').href = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(searchQuery);
+        document.getElementById('link-wiki').href = "https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.n);
+      }
     }
   </script>
 </body>

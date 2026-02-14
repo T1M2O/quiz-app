@@ -48,7 +48,6 @@
     .news-item { margin-bottom: 4px; color: #555; }
     .news-date { font-weight: bold; margin-right: 5px; color: #856404; }
 
-    /* ★修正：右上に変更し、Zインデックスを上げて結果画面等でも常に押せるように調整 */
     .settings-icon { position: absolute; top: 15px; right: 15px; font-size: 24px; cursor: pointer; z-index: 201; transition: transform 0.3s; }
     .settings-icon:active { transform: rotate(90deg); }
     
@@ -241,7 +240,7 @@
     <div class="stats-bar" id="menu-stats" style="margin-top:30px;"></div>
     
     <div id="news-box" class="news-box hidden">
-      <div style="display:flex; justify-content:flex-start; align-items:center; gap: 10px; margin-bottom:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <h3 style="margin:0;">📢 お知らせ</h3>
         <button class="btn" style="padding:4px 8px; margin:0; width:auto; font-size:11px; background:#6c757d; border-radius:4px;" onclick="openNewsModal()">お知らせ一覧</button>
       </div>
@@ -400,7 +399,15 @@
     // =====================================
 
     window.onload = function() {
-      if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+      // ★超重要：強力すぎるキャッシュの元凶（Service Worker）を完全に削除する
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+          }
+        });
+      }
+
       const select = document.getElementById('answer-select');
       prefectures.forEach(pref => {
         const option = document.createElement('option'); option.value = pref; option.textContent = pref; select.appendChild(option);
@@ -437,7 +444,6 @@
     }
     function closeSubModal(id) { document.getElementById(id).classList.add('hidden'); openSettings(); }
     
-    // ★追加：お知らせ一覧専用の開閉処理
     function openNewsModal() { document.getElementById('news-modal').classList.remove('hidden'); }
     function closeNewsModal() { document.getElementById('news-modal').classList.add('hidden'); }
 

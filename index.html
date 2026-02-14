@@ -52,14 +52,22 @@
     .settings-icon { position: absolute; top: 15px; left: 15px; font-size: 24px; cursor: pointer; z-index: 100; transition: transform 0.3s; }
     .settings-icon:active { transform: rotate(90deg); }
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; justify-content: center; align-items: center; }
-    .modal-content { background: white; width: 85%; max-width: 320px; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.2s ease-out; }
+    .modal-content { background: white; width: 85%; max-width: 320px; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.2s ease-out; position: relative; max-height: 90vh; overflow-y: auto;}
     @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     
     .settings-list { list-style: none; padding: 0; margin: 0; text-align: left; }
     .settings-list li { padding: 15px 5px; border-bottom: 1px solid #eee; font-size: 16px; display: flex; align-items: center; cursor: pointer; }
     .settings-list li:last-child { border-bottom: none; }
     .settings-list li span.icon { margin-right: 10px; font-size: 20px; }
-    .disabled-item { color: #aaa; cursor: not-allowed; }
+    
+    /* トグルスイッチ用 */
+    .toggle-switch { position: relative; width: 50px; height: 26px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+    .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: #00B900; }
+    input:checked + .slider:before { transform: translateX(24px); }
+
     .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
     .spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-bottom: 20px; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -67,19 +75,21 @@
     .stats-card { text-align: left; background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #007bff; }
     .progress-bg { background: #e9ecef; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 5px; }
     .progress-bar { height: 100%; width: 0%; transition: width 0.5s; }
+    
+    /* 使い方説明用 */
+    .help-section { text-align: left; margin-bottom: 15px; font-size: 14px; color: #444; border-bottom: 1px dashed #eee; padding-bottom: 10px; }
+    .help-section h4 { margin: 0 0 5px 0; color: #007bff; }
   </style>
 </head>
 <body>
 
   <div id="image-viewer" class="modal-overlay hidden" style="z-index: 100000; background: rgba(0,0,0,0.95); flex-direction: column;" onclick="closeImageViewer()">
-    <div style="width: 100%; text-align: right; padding: 20px; box-sizing: border-box;">
-      <span style="color: white; font-size: 30px; cursor: pointer; font-weight: bold;">✖</span>
-    </div>
+    <div style="width: 100%; text-align: right; padding: 20px; box-sizing: border-box;"><span style="color: white; font-size: 30px; cursor: pointer; font-weight: bold;">✖</span></div>
     <img id="viewer-img" src="" style="max-width: 95%; max-height: 80%; object-fit: contain; border-radius: 8px;">
     <div style="color: white; margin-top: 15px; font-size: 14px;">タップして閉じる</div>
   </div>
 
-  <div id="custom-alert" class="modal-overlay hidden">
+  <div id="custom-alert" class="modal-overlay hidden" style="z-index: 100001;">
     <div class="modal-content">
       <p id="alert-msg" style="font-size:16px; margin-bottom:20px; line-height:1.5;"></p>
       <button class="btn" onclick="closeAlert()" style="margin:0;">OK</button>
@@ -90,14 +100,78 @@
     <div class="modal-content" style="padding:15px;">
       <h3 style="margin-top:0; border-bottom:2px solid #007bff; padding-bottom:5px;">⚙️ 設定</h3>
       <ul class="settings-list">
-        <li class="disabled-item" onclick="myAlert('現在準備中です')"><span class="icon">🎵</span> サウンド設定</li>
-        <li class="disabled-item" onclick="myAlert('現在準備中です')"><span class="icon">👤</span> アカウント情報変更</li>
-        <li onclick="openAdmin()"><span class="icon">🔑</span> 管理者モード</li>
-        <li class="disabled-item" onclick="myAlert('現在準備中です')"><span class="icon">📖</span> 使い方説明</li>
+        <li onclick="openSubModal('sound-modal')"><span class="icon">🎵</span> サウンド設定</li>
+        <li onclick="openSubModal('account-modal')"><span class="icon">👤</span> アカウント情報変更</li>
+        <li onclick="openSubModal('admin-modal')"><span class="icon">🔑</span> 管理者モード</li>
+        <li onclick="openSubModal('help-modal')"><span class="icon">📖</span> 使い方説明</li>
         <li onclick="logout()" style="color:#dc3545;"><span class="icon">🚪</span> ログアウト</li>
-        <li class="disabled-item" onclick="myAlert('現在準備中です')"><span class="icon">⚠️</span> アカウント削除</li>
+        <li onclick="openSubModal('delete-modal')" style="color:#dc3545;"><span class="icon">⚠️</span> アカウント削除</li>
       </ul>
       <button class="btn" style="background:#6c757d; margin-bottom:0;" onclick="closeSettings()">閉じる</button>
+    </div>
+  </div>
+
+  <div id="sound-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">🎵 サウンド設定</h3>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin:20px 0;">
+        <span style="font-weight:bold;">効果音</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="sound-toggle" onchange="toggleSound()">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div style="margin-bottom: 30px; text-align:left;">
+        <label style="font-weight:bold; display:block; margin-bottom:10px;">音量</label>
+        <input type="range" id="sound-vol" min="0" max="100" value="50" style="width:100%;" onchange="changeVolume()">
+      </div>
+      <button class="btn" style="background:#6c757d; margin:0;" onclick="closeSubModal('sound-modal')">戻る</button>
+    </div>
+  </div>
+
+  <div id="account-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">👤 アカウント変更</h3>
+      <p style="font-size:12px; color:#666;">新しい名前やパスワードを入力してください。<br>（変更しない項目はそのまま）</p>
+      <input type="text" id="edit-name" placeholder="新しいニックネーム">
+      <input type="password" id="edit-pass" placeholder="新しいパスワード">
+      <div style="display:flex; gap:10px; margin-top:15px;">
+        <button class="btn" style="background:#6c757d; flex:1; margin:0;" onclick="closeSubModal('account-modal')">戻る</button>
+        <button class="btn" style="background:#00B900; flex:1; margin:0;" onclick="updateAccount()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="delete-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3 style="margin-top:0; color:#dc3545;">⚠️ アカウント削除</h3>
+      <p style="font-size:13px; color:#333; line-height:1.5;">本当にアカウントを削除しますか？<br>この操作は取り消せません。学習記録もすべて消去されます。</p>
+      <input type="text" id="delete-confirm" placeholder="「削除」と入力してください" style="border-color:#dc3545;">
+      <div style="display:flex; gap:10px; margin-top:15px;">
+        <button class="btn" style="background:#6c757d; flex:1; margin:0;" onclick="closeSubModal('delete-modal')">戻る</button>
+        <button class="btn" style="background:#dc3545; flex:1; margin:0;" onclick="deleteAccount()">削除する</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="help-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">📖 使い方説明</h3>
+      
+      <div class="help-section">
+        <h4>🏙 市町村クイズ / ⛩️ 観光地クイズ</h4>
+        表示された画像の場所がどの都道府県にあるかを当てるクイズです。不正解だった問題は自動で記録されます。
+      </div>
+      <div class="help-section">
+        <h4>🔥 復習モード</h4>
+        これまでに間違えた問題だけがランダムに出題されます。正解すると苦手リストから消去されます。
+      </div>
+      <div class="help-section">
+        <h4>📊 統計データ</h4>
+        あなたのこれまでのクイズの正解率や回答数を確認することができます。
+      </div>
+      
+      <button class="btn" style="background:#6c757d; margin:0; margin-top:15px;" onclick="closeSubModal('help-modal')">閉じる</button>
     </div>
   </div>
 
@@ -105,14 +179,13 @@
     <div class="modal-content">
       <h3 style="margin-top:0;">🔑 管理者モード</h3>
       <p style="font-size:12px; color:#666;">アクセスキーを入力してください</p>
-      <input type="text" id="admin-pass-input" placeholder="パスワードを入力" style="margin-bottom:20px;">
+      <input type="password" id="admin-pass-input" placeholder="パスワードを入力" style="margin-bottom:20px;">
       <div style="display:flex; gap:10px;">
-        <button class="btn" style="background:#6c757d; flex:1; margin:0;" onclick="closeAdmin()">戻る</button>
+        <button class="btn" style="background:#6c757d; flex:1; margin:0;" onclick="closeSubModal('admin-modal')">戻る</button>
         <button class="btn" style="background:#007bff; flex:1; margin:0;" onclick="checkAdmin()">送信</button>
       </div>
     </div>
   </div>
-
   <div id="loading-overlay" class="loading-overlay hidden">
     <div class="spinner"></div>
     <div id="loading-text" style="font-size:18px; font-weight:bold;">読み込み中...</div>
@@ -202,10 +275,10 @@
   </div>
 
   <script>
-    // ★★★ここに最新のGAS URLを貼り付けてください！★★★
+    // ★★★ 指定のGAS API URL ★★★
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzv0Gz2d0Ex0NDW8MHuHX6tCKqtGGsUfXrqhQFnar0F0Xw9y5RaFDKz13JZQTh_x2Nk/exec";
     
-    // ★前回のミス（HTMLにバージョンを固定書き込みしたこと）を削除しました！
+    const LOCAL_APP_VERSION = 1.1;
 
     let myUserId = null;
     let appData = { stats: null, city: [], tourist: [], news: [], hidden: [] };
@@ -217,6 +290,60 @@
 
     const prefectures = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
 
+    // ===== サウンド機能 (Web Audio API) =====
+    let audioCtx;
+    let soundEnabled = (localStorage.getItem('quiz_app_sound') !== 'false');
+    let soundVol = parseInt(localStorage.getItem('quiz_app_vol')) || 50;
+
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+    document.addEventListener('touchstart', initAudio, { once: true });
+    document.addEventListener('click', initAudio, { once: true });
+
+    // 画面タップでポチッと鳴らす
+    document.addEventListener('click', function(e) {
+      if (e.target.closest('.btn') || e.target.closest('.settings-list li') || e.target.closest('.settings-icon')) {
+        playTone(600, 'sine', 0.05, 0.3); // クリック音
+      }
+    });
+
+    function playTone(freq, type, duration, volScale) {
+      if (!soundEnabled || !audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      const actualVol = (soundVol / 100) * volScale;
+      gain.gain.setValueAtTime(actualVol, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playCorrectSound() {
+      playTone(880, 'sine', 0.1, 0.5); 
+      setTimeout(() => playTone(1108, 'sine', 0.3, 0.5), 100);
+    }
+    function playWrongSound() {
+      playTone(300, 'sawtooth', 0.3, 0.5); 
+    }
+
+    function toggleSound() {
+      soundEnabled = document.getElementById('sound-toggle').checked;
+      localStorage.setItem('quiz_app_sound', soundEnabled);
+      if(soundEnabled) { initAudio(); playTone(880, 'sine', 0.1, 0.3); }
+    }
+    function changeVolume() {
+      soundVol = document.getElementById('sound-vol').value;
+      localStorage.setItem('quiz_app_vol', soundVol);
+      playTone(600, 'sine', 0.1, 0.3);
+    }
+    // =====================================
+
     window.onload = function() {
       if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
       const select = document.getElementById('answer-select');
@@ -224,6 +351,11 @@
         const option = document.createElement('option');
         option.value = pref; option.textContent = pref; select.appendChild(option);
       });
+      
+      // サウンド設定のUI反映
+      document.getElementById('sound-toggle').checked = soundEnabled;
+      document.getElementById('sound-vol').value = soundVol;
+
       const storedName = localStorage.getItem('quiz_app_name');
       const storedPass = localStorage.getItem('quiz_app_pass');
       if (storedName && storedPass) { performLogin(storedName, storedPass); }
@@ -236,26 +368,70 @@
     }
     function closeAlert() { document.getElementById('custom-alert').classList.add('hidden'); }
 
-    // 画像ポップアップ
-    function openImageViewer(src) {
-      document.getElementById('viewer-img').src = src;
-      document.getElementById('image-viewer').classList.remove('hidden');
-    }
-    function closeImageViewer() {
-      document.getElementById('image-viewer').classList.add('hidden');
-      document.getElementById('viewer-img').src = "";
-    }
+    function openImageViewer(src) { document.getElementById('viewer-img').src = src; document.getElementById('image-viewer').classList.remove('hidden'); }
+    function closeImageViewer() { document.getElementById('image-viewer').classList.add('hidden'); document.getElementById('viewer-img').src = ""; }
 
+    // モーダル管理
     function openSettings() { document.getElementById('settings-modal').classList.remove('hidden'); }
     function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
     
-    function openAdmin() {
+    function openSubModal(id) {
       closeSettings();
-      document.getElementById('admin-pass-input').value = "";
-      document.getElementById('admin-modal').classList.remove('hidden');
+      document.getElementById(id).classList.remove('hidden');
+      if(id === 'account-modal') {
+        document.getElementById('edit-name').value = localStorage.getItem('quiz_app_name');
+        document.getElementById('edit-pass').value = localStorage.getItem('quiz_app_pass');
+      }
     }
-    function closeAdmin() { document.getElementById('admin-modal').classList.add('hidden'); }
+    function closeSubModal(id) {
+      document.getElementById(id).classList.add('hidden');
+      openSettings(); // 閉じたらメイン設定に戻る
+    }
     
+    // --- アカウント情報変更 ---
+    async function updateAccount() {
+      const newName = document.getElementById('edit-name').value;
+      const newPass = document.getElementById('edit-pass').value;
+      const oldName = localStorage.getItem('quiz_app_name');
+      if (!newName || !newPass) return myAlert("空欄があります");
+      
+      showLoading("更新中...");
+      try {
+        const url = `${GAS_API_URL}?action=updateAccount&userId=${myUserId}&oldName=${encodeURIComponent(oldName)}&newName=${encodeURIComponent(newName)}&newPass=${encodeURIComponent(newPass)}`;
+        const res = await fetch(url).then(r => r.json());
+        hideLoading();
+        if (res.success) {
+          localStorage.setItem('quiz_app_name', newName);
+          localStorage.setItem('quiz_app_pass', newPass);
+          myAlert("アカウント情報を更新しました！");
+          closeSubModal('account-modal');
+        } else {
+          myAlert(res.message);
+        }
+      } catch(e) { hideLoading(); myAlert("通信エラーが発生しました"); }
+    }
+
+    // --- アカウント削除 ---
+    async function deleteAccount() {
+      const confirmText = document.getElementById('delete-confirm').value;
+      if (confirmText !== "削除") return myAlert("「削除」と入力してください");
+      
+      const oldName = localStorage.getItem('quiz_app_name');
+      showLoading("アカウント削除中...");
+      try {
+        const url = `${GAS_API_URL}?action=deleteAccount&userId=${myUserId}&oldName=${encodeURIComponent(oldName)}`;
+        const res = await fetch(url).then(r => r.json());
+        hideLoading();
+        if (res.success) {
+          alert("アカウントを完全に削除しました。ご利用ありがとうございました。"); // ここはネイティブで止める
+          logout();
+        } else {
+          myAlert(res.message);
+        }
+      } catch(e) { hideLoading(); myAlert("通信エラーが発生しました"); }
+    }
+
+    // 管理者モード
     async function checkAdmin() {
       const pass = document.getElementById('admin-pass-input').value;
       if (!pass) return myAlert("キーを入力してください");
@@ -265,18 +441,13 @@
         const url = `${GAS_API_URL}?action=checkAdmin&pass=${encodeURIComponent(pass)}`;
         const res = await fetch(url).then(r => r.json());
         hideLoading();
-        closeAdmin();
+        document.getElementById('admin-modal').classList.add('hidden');
         
         if (res.success) {
           appData.hidden = res.hiddenQuiz;
           startHiddenQuiz(); 
-        } else {
-          myAlert(res.message);
-        }
-      } catch(e) {
-        hideLoading();
-        myAlert("通信エラーが発生しました。");
-      }
+        } else { myAlert(res.message); }
+      } catch(e) { hideLoading(); myAlert("通信エラーが発生しました。"); }
     }
 
     function manualLogin() {
@@ -307,19 +478,11 @@
         return;
       }
 
-      // ★修正：リロード地獄を防ぐ、正しい自動アップデート機能
-      // ローカルに保存されているバージョンを確認（なければ1.0とする）
       const currentVersion = localStorage.getItem('quiz_app_version') || 1.0;
-      
       if (res.appVersion && parseFloat(res.appVersion) > parseFloat(currentVersion)) {
-        // GASから新しいバージョンが届いたら、ローカルの記憶を最新に上書きする！
         localStorage.setItem('quiz_app_version', res.appVersion); 
-        
         myAlert("🚀 アプリの新しいバージョンが見つかりました！最新版に更新します。");
-        setTimeout(() => {
-          // 強制リロードを実行（これで1回だけリロードされてループが止まります！）
-          window.location.href = window.location.pathname + "?v=" + new Date().getTime();
-        }, 2000);
+        setTimeout(() => { window.location.href = window.location.pathname + "?v=" + new Date().getTime(); }, 2000);
         return;
       }
 
@@ -377,10 +540,8 @@
     function startHiddenQuiz() {
       currentMode = 'hidden';
       document.getElementById('review-banner').classList.add('hidden');
-      
       hiddenQueue = [...appData.hidden];
       hiddenQueue.sort(() => Math.random() - 0.5);
-
       nextQuestion();
       hideAll(); 
       document.getElementById('game-screen').classList.remove('hidden'); 
@@ -421,7 +582,13 @@
     }
     
     function backToMenu() { showMenu(); }
-    function logout() { localStorage.removeItem('quiz_app_userid'); localStorage.removeItem('quiz_app_name'); localStorage.removeItem('quiz_app_pass'); location.reload(); }
+    
+    function logout() { 
+      localStorage.removeItem('quiz_app_userid'); 
+      localStorage.removeItem('quiz_app_name'); 
+      localStorage.removeItem('quiz_app_pass'); 
+      location.reload(); 
+    }
 
     function nextQuestion() {
       document.getElementById('result-overlay').classList.add('hidden');
@@ -446,14 +613,10 @@
           document.getElementById('hidden-answer-area').classList.add('hidden'); 
           return;
         }
-
         q = hiddenQueue.pop();
-        
         currentChoices = [q.a, q.w1, q.w2, q.w3];
         currentChoices.sort(() => Math.random() - 0.5); 
-        for (let i = 0; i < 4; i++) {
-          document.getElementById('btn-choice-' + i).innerText = currentChoices[i];
-        }
+        for (let i = 0; i < 4; i++) { document.getElementById('btn-choice-' + i).innerText = currentChoices[i]; }
 
       } else if (currentMode === 'review') {
         if (!wrongList || wrongList.length === 0) { myAlert("復習完了！メニューに戻ります。"); return backToMenu(); }
@@ -481,10 +644,7 @@
       processAnswer(v);
     }
     function giveUp() { processAnswer("GIVE_UP"); }
-    
-    function submitHiddenAnswer(index) {
-      processAnswer(currentChoices[index]);
-    }
+    function submitHiddenAnswer(index) { processAnswer(currentChoices[index]); }
 
     function processAnswer(ans) {
       const isCorrect = (ans === currentQuestion.a);
@@ -494,17 +654,11 @@
       if (currentMode === 'hidden') {
       } else if (currentMode === 'review') {
         qKey = currentQuestion.q + "_" + currentQuestion.a;
-        if (isCorrect) {
-          wrongList = wrongList.filter(k => k !== qKey);
-          syncType = 'remove';
-        }
+        if (isCorrect) { wrongList = wrongList.filter(k => k !== qKey); syncType = 'remove'; }
       } else {
         qKey = currentQuestion.q + "_" + currentQuestion.a;
         updateLocalStats(isCorrect);
-        if (!isCorrect) {
-          if (wrongList) { if (!wrongList.includes(qKey)) wrongList.push(qKey); }
-          syncType = 'add';
-        }
+        if (!isCorrect) { if (wrongList) { if (!wrongList.includes(qKey)) wrongList.push(qKey); } syncType = 'add'; }
       }
       
       showResult(isCorrect, currentQuestion.a);
@@ -519,6 +673,10 @@
     }
 
     function showResult(isCorrect, ans) {
+      // ★正解・不正解でサウンドを鳴らす
+      if(isCorrect) playCorrectSound();
+      else playWrongSound();
+
       const overlay = document.getElementById('result-overlay');
       const icon = document.getElementById('res-icon');
       const text = document.getElementById('res-text');
@@ -528,10 +686,8 @@
       
       document.getElementById('res-ans').innerText = ans;
 
-      // ★解説画像エリア（アプリ内ポップアップ）
       if (currentMode === 'hidden') {
         document.getElementById('link-container').classList.add('hidden');
-        
         if (currentQuestion.expImg) {
           document.getElementById('exp-img-container').innerHTML = `
             <div style="margin-top:10px;">
@@ -539,10 +695,7 @@
               <div style="font-size:11px; color:#888; margin-top:5px;">👆画像をタップすると拡大します</div>
             </div>
           `;
-        } else {
-          document.getElementById('exp-img-container').innerHTML = "";
-        }
-        
+        } else { document.getElementById('exp-img-container').innerHTML = ""; }
       } else {
         document.getElementById('link-container').classList.remove('hidden');
         document.getElementById('exp-img-container').innerHTML = ""; 

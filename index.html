@@ -14,41 +14,103 @@
   <link rel="icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f5fe.png">
 
   <style>
-    /* スタイル変更なし */
+    /* 共通スタイル */
     body { font-family: "Helvetica Neue", Arial, sans-serif; text-align: center; background-color: #f0f8ff; margin: 0; padding: 20px; color: #333; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
     .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; min-height: 500px; display: flex; flex-direction: column; position: relative; }
     input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: white; -webkit-appearance: none; appearance: none; }
-    .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: transform 0.1s; }
+    
+    .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: transform 0.1s; text-decoration: none; box-sizing: border-box; }
     .btn:active { transform: scale(0.98); }
     .btn-city { background: #00B900; }
     .btn-tour { background: #E67E22; }
     .btn-review { background: #dc3545; }
     .btn-stats { background: #6f42c1; }
     .btn-giveup { background: #6c757d; margin-top: 5px; }
-    .error { color: #dc3545; font-size: 14px; }
+    .btn-dummy { background: #e0e0e0; color: #888; cursor: not-allowed; }
+    
     .hidden { display: none !important; }
     .stats-bar { display: flex; justify-content: space-around; background: #333; color: white; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; }
     .stats-item span { font-size: 18px; font-weight: bold; color: #ffc107; margin-left: 5px; }
+    
+    /* クイズ画面 */
     .quiz-header { font-size: 14px; color: #666; margin-bottom: 5px; }
     .quiz-text { font-size: 24px; font-weight: bold; margin: 15px 0; min-height: 1.2em; line-height: 1.4; }
     .quiz-img { max-height: 200px; width: auto; max-width: 100%; border-radius: 8px; object-fit: contain; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    
+    /* 結果画面 */
     .result-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.98); border-radius: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; }
     .res-icon { font-size: 80px; margin-bottom: 10px; }
     .res-text { font-size: 32px; font-weight: bold; margin-bottom: 20px; }
-    .correct-box { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 30px; width: 80%; }
-    .btn-next { width: 200px; }
+    .correct-box { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 20px; width: 80%; }
+    
+    /* お知らせ欄 */
+    .news-box { text-align: left; background: #fff3cd; border: 1px solid #ffeeba; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; max-height: 100px; overflow-y: auto; }
+    .news-box h3 { margin: 0 0 5px 0; font-size: 14px; color: #856404; }
+    .news-item { margin-bottom: 4px; color: #555; }
+    .news-date { font-weight: bold; margin-right: 5px; color: #856404; }
+
+    /* 設定ボタン（歯車） */
+    .settings-icon { position: absolute; top: 15px; left: 15px; font-size: 24px; cursor: pointer; z-index: 100; transition: transform 0.3s; }
+    .settings-icon:active { transform: rotate(90deg); }
+
+    /* モーダル用スタイル (自作Alert・設定画面用) */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; justify-content: center; align-items: center; }
+    .modal-content { background: white; width: 85%; max-width: 320px; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.2s ease-out; }
+    @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    
+    /* 設定メニューリスト */
+    .settings-list { list-style: none; padding: 0; margin: 0; text-align: left; }
+    .settings-list li { padding: 15px 5px; border-bottom: 1px solid #eee; font-size: 16px; display: flex; align-items: center; cursor: pointer; }
+    .settings-list li:last-child { border-bottom: none; }
+    .settings-list li span.icon { margin-right: 10px; font-size: 20px; }
+    .disabled-item { color: #aaa; cursor: not-allowed; }
+
+    /* ロード画面 */
     .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
     .spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-bottom: 20px; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 統計用 */
     .stats-card { text-align: left; background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #007bff; }
-    .stats-card h3 { margin: 0 0 10px 0; font-size: 16px; color: #555; }
-    .stats-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
-    .stats-val { font-weight: bold; font-size: 16px; }
     .progress-bg { background: #e9ecef; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 5px; }
-    .progress-bar { height: 100%; background: #007bff; width: 0%; transition: width 0.5s; }
+    .progress-bar { height: 100%; width: 0%; transition: width 0.5s; }
   </style>
 </head>
 <body>
+
+  <div id="custom-alert" class="modal-overlay hidden">
+    <div class="modal-content">
+      <p id="alert-msg" style="font-size:16px; margin-bottom:20px; line-height:1.5;"></p>
+      <button class="btn" onclick="closeAlert()" style="margin:0;">OK</button>
+    </div>
+  </div>
+
+  <div id="settings-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="padding:15px;">
+      <h3 style="margin-top:0; border-bottom:2px solid #007bff; padding-bottom:5px;">⚙️ 設定</h3>
+      <ul class="settings-list">
+        <li class="disabled-item" onclick="myAlert('現在準備中です')"><span class="icon">🎵</span> サウンド設定</li>
+        <li class="disabled-item" onclick="myAlert('現在準備中です')"><span class="icon">👤</span> アカウント情報変更</li>
+        <li onclick="openAdmin()"><span class="icon">🔑</span> 管理者モード</li>
+        <li class="disabled-item" onclick="myAlert('現在準備中です')"><span class="icon">📖</span> 使い方説明</li>
+        <li onclick="logout()" style="color:#dc3545;"><span class="icon">🚪</span> ログアウト</li>
+        <li class="disabled-item" onclick="myAlert('現在準備中です')"><span class="icon">⚠️</span> アカウント削除</li>
+      </ul>
+      <button class="btn" style="background:#6c757d; margin-bottom:0;" onclick="closeSettings()">閉じる</button>
+    </div>
+  </div>
+
+  <div id="admin-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">🔑 管理者モード</h3>
+      <p style="font-size:12px; color:#666;">アクセスキーを入力してください</p>
+      <input type="text" id="admin-pass-input" placeholder="パスワードを入力" style="margin-bottom:20px;">
+      <div style="display:flex; gap:10px;">
+        <button class="btn" style="background:#6c757d; flex:1; margin:0;" onclick="closeAdmin()">戻る</button>
+        <button class="btn" style="background:#007bff; flex:1; margin:0;" onclick="checkAdmin()">送信</button>
+      </div>
+    </div>
+  </div>
 
   <div id="loading-overlay" class="loading-overlay hidden">
     <div class="spinner"></div>
@@ -60,22 +122,29 @@
     <p>登録したアカウントでログイン</p>
     <input type="text" id="login-name" placeholder="ニックネーム">
     <input type="password" id="login-pass" placeholder="パスワード">
-    <p id="login-msg" class="error"></p>
     <button class="btn" onclick="manualLogin()">ログイン</button>
   </div>
 
   <div id="menu-screen" class="card hidden">
-    <div class="stats-bar" id="menu-stats"></div>
-    <h1>モード選択</h1>
+    <div class="settings-icon" onclick="openSettings()">⚙️</div>
+
+    <div class="stats-bar" id="menu-stats" style="margin-top:30px;"></div>
+    
+    <div id="news-box" class="news-box hidden">
+      <h3>📢 お知らせ</h3>
+      <div id="news-list"></div>
+    </div>
+
     <button class="btn btn-city" onclick="startGame('city')">🏙 市町村クイズ</button>
     <button class="btn btn-tour" onclick="startGame('tourist')">⛩️ 観光地クイズ</button>
     
-    <div style="display:flex; gap:10px; margin-top:10px;">
-      <button class="btn btn-review" onclick="startReview()" style="flex:1;">🔥 復習する</button>
-      <button class="btn btn-stats" onclick="showStatsDetail()" style="flex:1;">📊 統計データ</button>
+    <div style="display:flex; gap:10px; margin-top:5px;">
+      <button class="btn btn-review" onclick="startReview()" style="flex:1; margin:0;">🔥 復習する</button>
+      <button class="btn btn-stats" onclick="showStatsDetail()" style="flex:1; margin:0;">📊 統計データ</button>
     </div>
 
-    <button class="btn" style="background:#6c757d; margin-top:auto;" onclick="logout()">ログアウト</button>
+    <button class="btn btn-dummy" style="margin-top:15px;" onclick="myAlert('難読地名クイズは追加予定です！')">🔒 追加予定モード①</button>
+    <button class="btn btn-dummy" style="margin-top:5px;" onclick="myAlert('シルエットクイズは追加予定です！')">🔒 追加予定モード②</button>
   </div>
 
   <div id="stats-detail-screen" class="card hidden">
@@ -107,21 +176,28 @@
     <div id="result-overlay" class="result-overlay hidden">
       <div class="res-icon" id="res-icon"></div>
       <div class="res-text" id="res-text"></div>
-      <div class="correct-box"><span style="font-size:12px; color:#666;">正解は...</span><br><span id="res-ans" style="font-size:28px; font-weight:bold; color:#007bff;"></span></div>
-      <button class="btn btn-next" onclick="nextQuestion()">次の問題へ ➡</button>
+      <div class="correct-box">
+        <span style="font-size:12px; color:#666;">正解は...</span><br>
+        <span id="res-ans" style="font-size:28px; font-weight:bold; color:#007bff; display:block; margin-bottom:10px;"></span>
+      </div>
+      
+      <div style="display:flex; gap:10px; width:90%; margin-bottom: 20px;">
+        <a id="link-map" target="_blank" class="btn" style="background:#4285F4; flex:1; margin:0; padding:10px 0; font-size:14px;">🗺️ GoogleMap</a>
+        <a id="link-wiki" target="_blank" class="btn" style="background:#333; flex:1; margin:0; padding:10px 0; font-size:14px;">📖 Wikipedia</a>
+      </div>
+
+      <button class="btn btn-next" style="width:90%;" onclick="nextQuestion()">次の問題へ ➡</button>
     </div>
   </div>
 
   <script>
-    // ★★★ここにGASのURLを貼り付けてください！★★★
+    // ★★★ここに最新のGAS URLを貼り付けてください！★★★
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzv0Gz2d0Ex0NDW8MHuHX6tCKqtGGsUfXrqhQFnar0F0Xw9y5RaFDKz13JZQTh_x2Nk/exec";
     
     let myUserId = null;
-    let appData = { stats: null, city: [], tourist: [] };
+    let appData = { stats: null, city: [], tourist: [], news: [] };
     let currentMode = null;
     let currentQuestion = null;
-    
-    // ★最初はリストを持たない（null）
     let wrongList = null; 
 
     const prefectures = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
@@ -139,10 +215,38 @@
       else { document.getElementById('login-screen').classList.remove('hidden'); }
     };
 
+    // --- 自作アラート ---
+    function myAlert(msg) {
+      document.getElementById('alert-msg').innerText = msg;
+      document.getElementById('custom-alert').classList.remove('hidden');
+    }
+    function closeAlert() { document.getElementById('custom-alert').classList.add('hidden'); }
+
+    // --- 設定＆管理者メニュー ---
+    function openSettings() { document.getElementById('settings-modal').classList.remove('hidden'); }
+    function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
+    
+    function openAdmin() {
+      closeSettings();
+      document.getElementById('admin-pass-input').value = "";
+      document.getElementById('admin-modal').classList.remove('hidden');
+    }
+    function closeAdmin() { document.getElementById('admin-modal').classList.add('hidden'); }
+    
+    function checkAdmin() {
+      const pass = document.getElementById('admin-pass-input').value;
+      if (!pass) return myAlert("キーを入力してください");
+      
+      // 今回はダミー判定（将来ここにGASへの認証リクエストを入れる）
+      closeAdmin();
+      myAlert(`入力されたキー [ ${pass} ] は登録されていません。`);
+    }
+
+    // --- ログイン・通信系 ---
     function manualLogin() {
       const name = document.getElementById('login-name').value;
       const pass = document.getElementById('login-pass').value;
-      if(!name || !pass) return alert("入力してください");
+      if(!name || !pass) return myAlert("入力してください");
       performLogin(name, pass);
     }
 
@@ -154,7 +258,7 @@
         onDataLoaded(res, name, pass);
       } catch(e) {
         hideLoading();
-        alert("通信エラー: " + e.message);
+        myAlert("通信エラーが発生しました。電波の良いところで再度お試しください。");
         document.getElementById('login-screen').classList.remove('hidden');
       }
     }
@@ -162,7 +266,7 @@
     function onDataLoaded(res, name, pass) {
       hideLoading();
       if (!res.success) {
-        document.getElementById('login-msg').innerText = res.message;
+        myAlert(res.message);
         document.getElementById('login-screen').classList.remove('hidden');
         return;
       }
@@ -174,40 +278,54 @@
       appData.stats = res.stats;
       appData.city = res.masterData.city;
       appData.tourist = res.masterData.tourist;
+      appData.news = res.news || []; // お知らせデータ
       
-      // ★ログイン時はリストを取らないのでnullのまま
       wrongList = null;
-      
       document.getElementById('login-screen').classList.add('hidden');
       showMenu();
     }
 
-    // --- ★復習ボタンが押されたときの処理 ---
+    // --- メニュー表示 ---
+    function showMenu() {
+      hideAll(); 
+      document.getElementById('menu-screen').classList.remove('hidden');
+      
+      // 統計バー
+      const s = appData.stats;
+      if(s) document.getElementById('menu-stats').innerHTML = `<div class="stats-item">正解数: <span>${s.total.correct}</span></div><div class="stats-item">正解率: <span>${s.total.rate}%</span></div>`;
+      
+      // お知らせ描画
+      const newsBox = document.getElementById('news-box');
+      const newsList = document.getElementById('news-list');
+      if (appData.news && appData.news.length > 0) {
+        newsBox.classList.remove('hidden');
+        let html = '';
+        appData.news.forEach(n => {
+          html += `<div class="news-item"><span class="news-date">${n.date}</span> ${n.msg}</div>`;
+        });
+        newsList.innerHTML = html;
+      } else {
+        newsBox.classList.add('hidden');
+      }
+    }
+
+    // --- 復習スタート ---
     async function startReview() {
-      // 1. リストをまだ持っていない場合、サーバーに取りに行く
       if (wrongList === null) {
         showLoading("復習データを取得中...");
         try {
           const url = `${GAS_API_URL}?action=getWrongList&userId=${myUserId}`;
           const res = await fetch(url).then(r => r.json());
-          
-          if (res.wrongList) {
-            wrongList = res.wrongList;
-          } else {
-            throw new Error("取得失敗");
-          }
+          if (res.wrongList) { wrongList = res.wrongList; } 
+          else { throw new Error("取得失敗"); }
           hideLoading();
         } catch(e) {
           hideLoading();
-          alert("データ取得エラー: " + e.message);
-          return;
+          return myAlert("データ取得エラーが発生しました。");
         }
       }
+      if (wrongList.length === 0) return myAlert("復習する問題がありません！優秀！");
       
-      // 2. リストが空なら終了
-      if (wrongList.length === 0) return alert("復習する問題がありません！優秀！");
-      
-      // 3. ゲーム開始
       currentMode = 'review';
       document.getElementById('review-banner').classList.remove('hidden');
       nextQuestion();
@@ -216,40 +334,23 @@
       document.getElementById('result-overlay').classList.add('hidden');
     }
 
-    // --- 同期処理（差分送信） ---
     async function syncScore(isCorrect, syncType, wrongId) {
-      // isCorrect: true/false
-      // syncType: 'add' or 'remove' or 'none'
-      // wrongId: 問題のキー
-      
       const url = `${GAS_API_URL}?action=sync&userId=${myUserId}&mode=${currentMode}&isCorrect=${isCorrect}&syncType=${syncType}&wrongId=${encodeURIComponent(wrongId)}`;
-      
       try {
         const res = await fetch(url).then(r => r.json());
         if(res) appData.stats = res;
       } catch(e) { console.error(e); }
     }
     
-    // --- UI系 ---
+    // --- UI補助 ---
     function hideAll() { ['login-screen','menu-screen','game-screen','stats-detail-screen'].forEach(id=>document.getElementById(id).classList.add('hidden')); }
     function showLoading(msg) { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-overlay').classList.remove('hidden'); }
     function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
     
-    function showMenu() {
-      hideAll(); 
-      document.getElementById('menu-screen').classList.remove('hidden');
-      const s = appData.stats;
-      if(s) document.getElementById('menu-stats').innerHTML = `<div class="stats-item">正解数: <span>${s.total.correct}</span></div><div class="stats-item">正解率: <span>${s.total.rate}%</span></div>`;
-    }
-
     function showStatsDetail() {
       hideAll(); document.getElementById('stats-detail-screen').classList.remove('hidden');
       const s = appData.stats;
-      const html = `
-        ${createStatsCard("総合データ", s.total, "#007bff")}
-        ${createStatsCard("🏙 市町村クイズ", s.city, "#28a745")}
-        ${createStatsCard("⛩️ 観光地クイズ", s.tourist, "#e67e22")}
-      `;
+      const html = `${createStatsCard("総合データ", s.total, "#007bff")}${createStatsCard("🏙 市町村クイズ", s.city, "#28a745")}${createStatsCard("⛩️ 観光地クイズ", s.tourist, "#e67e22")}`;
       document.getElementById('stats-content').innerHTML = html;
     }
 
@@ -261,7 +362,7 @@
     function startGame(mode) {
       currentMode = mode;
       const dataset = (mode === 'city') ? appData.city : appData.tourist;
-      if (!dataset || dataset.length === 0) return alert("データがありません");
+      if (!dataset || dataset.length === 0) return myAlert("データがありません");
       document.getElementById('review-banner').classList.add('hidden');
       nextQuestion();
       hideAll(); document.getElementById('game-screen').classList.remove('hidden'); document.getElementById('result-overlay').classList.add('hidden');
@@ -273,16 +374,12 @@
     function nextQuestion() {
       let q = null;
       if (currentMode === 'review') {
-        if (!wrongList || wrongList.length === 0) { alert("復習完了！メニューに戻ります。"); return backToMenu(); }
+        if (!wrongList || wrongList.length === 0) { myAlert("復習完了！メニューに戻ります。"); return backToMenu(); }
         const randKey = wrongList[Math.floor(Math.random() * wrongList.length)];
         q = appData.city.find(item => (item.q + "_" + item.a) === randKey);
         if (!q) q = appData.tourist.find(item => (item.q + "_" + item.a) === randKey);
         
-        if (!q) { 
-          // データ不整合時
-          wrongList = wrongList.filter(k => k !== randKey); 
-          return nextQuestion(); 
-        }
+        if (!q) { wrongList = wrongList.filter(k => k !== randKey); return nextQuestion(); }
         document.getElementById('st-correct').innerText = "-"; document.getElementById('st-rate').innerText = "復習";
       } else {
         const dataset = (currentMode === 'city') ? appData.city : appData.tourist;
@@ -300,7 +397,7 @@
 
     function submitAnswer() {
       const v = document.getElementById('answer-select').value;
-      if(!v) return alert("選択してください");
+      if(!v) return myAlert("都道府県を選択してください");
       processAnswer(v);
     }
     function giveUp() { processAnswer("GIVE_UP"); }
@@ -312,26 +409,18 @@
 
       if (currentMode === 'review') {
         if (isCorrect) {
-          // 復習成功 -> ローカルリストから削除 & サーバーへ削除命令
           wrongList = wrongList.filter(k => k !== qKey);
           syncType = 'remove';
         }
       } else {
         updateLocalStats(isCorrect);
         if (!isCorrect) {
-          // 通常モード失敗 -> サーバーへ追加命令
-          // (ローカルリストを持っているなら追加するが、持っていなければ何もしない＝整合性維持)
-          if (wrongList) {
-             if (!wrongList.includes(qKey)) wrongList.push(qKey);
-          }
+          if (wrongList) { if (!wrongList.includes(qKey)) wrongList.push(qKey); }
           syncType = 'add';
         }
       }
       
-      // 結果表示
       showResult(isCorrect, currentQuestion.a);
-      
-      // 裏で同期（差分のみ）
       syncScore(isCorrect, syncType, qKey);
     }
 
@@ -349,7 +438,14 @@
       overlay.classList.remove('hidden');
       if(isCorrect) { icon.innerText = '⭕'; text.innerText = '正解！'; text.style.color = '#28a745'; }
       else { icon.innerText = '❌'; text.innerText = '残念...'; text.style.color = '#dc3545'; }
+      
       document.getElementById('res-ans').innerText = ans;
+
+      // ★追加：Wiki/Mapリンクの生成
+      // currentQuestion.n には「市町村名」や「観光地名」が入っています
+      const searchQuery = currentQuestion.a + " " + currentQuestion.n; 
+      document.getElementById('link-map').href = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(searchQuery);
+      document.getElementById('link-wiki').href = "https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.n);
     }
   </script>
 </body>

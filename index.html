@@ -19,7 +19,7 @@
   <style>
     body { font-family: "Helvetica Neue", Arial, sans-serif; text-align: center; background-color: #f0f8ff; margin: 0; padding: 20px; color: #333; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
     .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; min-height: 500px; display: flex; flex-direction: column; position: relative; }
-    input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: white; -webkit-appearance: none; appearance: none; }
+    input[type="text"], input[type="password"], select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: white; -webkit-appearance: none; appearance: none; }
     
     .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: transform 0.1s; text-decoration: none; box-sizing: border-box; }
     .btn:active { transform: scale(0.98); }
@@ -59,12 +59,25 @@
     .settings-list li:last-child { border-bottom: none; }
     .settings-list li span.icon { margin-right: 10px; font-size: 20px; }
     
+    /* トグルスイッチ */
     .toggle-switch { position: relative; width: 50px; height: 26px; }
     .toggle-switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
     .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
     input:checked + .slider { background-color: #00B900; }
     input:checked + .slider:before { transform: translateX(24px); }
+
+    /* ★変更：音量スライダー（青色ゲージ対応） */
+    input[type=range] {
+      -webkit-appearance: none; width: 100%; height: 8px; border-radius: 4px;
+      outline: none; padding: 0; border: none; background: #ccc; margin: 15px 0;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: #007bff; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    input[type=range]:disabled::-webkit-slider-thumb { background: #888; }
 
     .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
     .spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-bottom: 20px; }
@@ -127,9 +140,9 @@
       <div id="volume-container" style="margin-bottom: 30px; text-align:left;">
         <label style="font-weight:bold; display:flex; justify-content:space-between; margin-bottom:10px;">
           <span>音量</span>
-          <span id="vol-display" style="color:#007bff; font-size:18px;">50</span>
+          <span id="vol-display" style="color:#007bff; font-size:18px; font-weight:bold;">50</span>
         </label>
-        <input type="range" id="sound-vol" min="0" max="100" step="1" value="50" style="width:100%; margin:0;" oninput="changeVolume()" onchange="saveVolume()">
+        <input type="range" id="sound-vol" min="0" max="100" step="1" value="50" oninput="changeVolume()" onchange="saveVolume()">
       </div>
       <button class="btn" style="background:#6c757d; margin:0;" onclick="closeSubModal('sound-modal')">戻る</button>
     </div>
@@ -343,8 +356,27 @@
       osc.start(); osc.stop(audioCtx.currentTime + duration);
     }
 
-    function playCorrectSound() { playTone(880, 'sine', 0.1, 0.5); setTimeout(() => playTone(1108, 'sine', 0.3, 0.5), 100); }
-    function playWrongSound() { playTone(300, 'sawtooth', 0.3, 0.5); }
+    // ★変更：クイズ番組風の「ピン・ポーン」音
+    function playCorrectSound() { 
+      playTone(987, 'sine', 0.15, 0.4); 
+      setTimeout(() => playTone(784, 'sine', 0.4, 0.4), 150); 
+    }
+    // ★変更：クイズ番組風の「ブッブー」音（濁ったブザー音）
+    function playWrongSound() { 
+      playTone(150, 'square', 0.4, 0.15); 
+      playTone(156, 'square', 0.4, 0.15); 
+    }
+
+    // ★追加：スライダーの背景を青くする関数
+    function updateSliderColor() {
+      const slider = document.getElementById('sound-vol');
+      if (!soundEnabled) {
+        slider.style.background = '#ccc';
+        return;
+      }
+      const val = slider.value;
+      slider.style.background = `linear-gradient(to right, #007bff ${val}%, #ccc ${val}%)`;
+    }
 
     function updateVolUI() {
       const volContainer = document.getElementById('volume-container');
@@ -353,10 +385,13 @@
       if (soundEnabled) {
         volContainer.style.opacity = "1"; volContainer.style.pointerEvents = "auto";
         volSlider.disabled = false; volDisplay.innerText = soundVol;
+        volDisplay.style.color = "#007bff";
       } else {
         volContainer.style.opacity = "0.4"; volContainer.style.pointerEvents = "none";
         volSlider.disabled = true; volDisplay.innerText = "OFF";
+        volDisplay.style.color = "#888";
       }
+      updateSliderColor();
     }
     function toggleSound() {
       soundEnabled = document.getElementById('sound-toggle').checked;
@@ -367,6 +402,7 @@
     function changeVolume() {
       soundVol = document.getElementById('sound-vol').value;
       document.getElementById('vol-display').innerText = soundVol;
+      updateSliderColor();
     }
     function saveVolume() {
       localStorage.setItem('quiz_app_vol', soundVol);

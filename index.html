@@ -138,13 +138,11 @@
     <button class="btn btn-city" onclick="startGame('city')">🏙 市町村クイズ</button>
     <button class="btn btn-tour" onclick="startGame('tourist')">⛩️ 観光地クイズ</button>
     
-    <div style="display:flex; gap:10px; margin-top:5px;">
-      <button class="btn btn-review" onclick="startReview()" style="flex:1; margin:0;">🔥 復習する</button>
-      <button class="btn btn-stats" onclick="showStatsDetail()" style="flex:1; margin:0;">📊 統計データ</button>
-    </div>
+    <button class="btn btn-dummy" style="margin-top:10px;" onclick="myAlert('難読地名クイズは追加予定です！')">🔒 追加予定モード①</button>
+    <button class="btn btn-dummy" style="margin-top:10px;" onclick="myAlert('シルエットクイズは追加予定です！')">🔒 追加予定モード②</button>
 
-    <button class="btn btn-dummy" style="margin-top:15px;" onclick="myAlert('難読地名クイズは追加予定です！')">🔒 追加予定モード①</button>
-    <button class="btn btn-dummy" style="margin-top:5px;" onclick="myAlert('シルエットクイズは追加予定です！')">🔒 追加予定モード②</button>
+    <button class="btn btn-review" style="margin-top:10px;" onclick="startReview()">🔥 復習モード</button>
+    <button class="btn btn-stats" style="margin-top:10px;" onclick="showStatsDetail()">📊 統計データ</button>
   </div>
 
   <div id="stats-detail-screen" class="card hidden">
@@ -237,7 +235,6 @@
       const pass = document.getElementById('admin-pass-input').value;
       if (!pass) return myAlert("キーを入力してください");
       
-      // 今回はダミー判定（将来ここにGASへの認証リクエストを入れる）
       closeAdmin();
       myAlert(`入力されたキー [ ${pass} ] は登録されていません。`);
     }
@@ -278,7 +275,7 @@
       appData.stats = res.stats;
       appData.city = res.masterData.city;
       appData.tourist = res.masterData.tourist;
-      appData.news = res.news || []; // お知らせデータ
+      appData.news = res.news || []; 
       
       wrongList = null;
       document.getElementById('login-screen').classList.add('hidden');
@@ -290,11 +287,9 @@
       hideAll(); 
       document.getElementById('menu-screen').classList.remove('hidden');
       
-      // 統計バー
       const s = appData.stats;
       if(s) document.getElementById('menu-stats').innerHTML = `<div class="stats-item">正解数: <span>${s.total.correct}</span></div><div class="stats-item">正解率: <span>${s.total.rate}%</span></div>`;
       
-      // お知らせ描画
       const newsBox = document.getElementById('news-box');
       const newsList = document.getElementById('news-list');
       if (appData.news && appData.news.length > 0) {
@@ -441,8 +436,6 @@
       
       document.getElementById('res-ans').innerText = ans;
 
-      // ★追加：Wiki/Mapリンクの生成
-      // currentQuestion.n には「市町村名」や「観光地名」が入っています
       const searchQuery = currentQuestion.a + " " + currentQuestion.n; 
       document.getElementById('link-map').href = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(searchQuery);
       document.getElementById('link-wiki').href = "https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.n);

@@ -337,7 +337,7 @@
       currentMode = 'review';
       document.getElementById('review-banner').classList.remove('hidden');
       nextQuestion();
-      hideAll(); document.getElementById('game-screen').classList.remove('hidden'); document.getElementById('result-overlay').classList.add('hidden');
+      hideAll(); document.getElementById('game-screen').classList.remove('hidden');
     }
 
     function startHiddenQuiz() {
@@ -350,7 +350,6 @@
       nextQuestion();
       hideAll(); 
       document.getElementById('game-screen').classList.remove('hidden'); 
-      // result-overlay は nextQuestion 側で隠すのでここは安全のため
     }
 
     async function syncScore(isCorrect, syncType, wrongId) {
@@ -391,12 +390,10 @@
     function logout() { localStorage.removeItem('quiz_app_userid'); localStorage.removeItem('quiz_app_name'); localStorage.removeItem('quiz_app_pass'); location.reload(); }
 
     function nextQuestion() {
-      // ★ 最重要修正箇所：必ず最初に結果画面を隠す
       document.getElementById('result-overlay').classList.add('hidden');
       
       let q = null;
       
-      // UIの切り替え
       if (currentMode === 'hidden') {
         document.getElementById('normal-answer-area').classList.add('hidden');
         document.getElementById('hidden-answer-area').classList.remove('hidden');
@@ -499,11 +496,19 @@
       
       document.getElementById('res-ans').innerText = ans;
 
+      // ★画像のサイズ拡大＆タップで別タブ表示の処理
       if (currentMode === 'hidden') {
         document.getElementById('link-container').classList.add('hidden');
         
         if (currentQuestion.expImg) {
-          document.getElementById('exp-img-container').innerHTML = `<img src="${currentQuestion.expImg}" style="max-width:100%; max-height:150px; border-radius:8px; object-fit:contain;">`;
+          document.getElementById('exp-img-container').innerHTML = `
+            <div style="margin-top:10px;">
+              <a href="${currentQuestion.expImg}" target="_blank">
+                <img src="${currentQuestion.expImg}" style="width:100%; max-height:280px; border-radius:8px; object-fit:contain; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+              </a>
+              <div style="font-size:11px; color:#888; margin-top:5px;">👆画像をタップすると拡大します</div>
+            </div>
+          `;
         } else {
           document.getElementById('exp-img-container').innerHTML = "";
         }

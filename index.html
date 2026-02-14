@@ -152,8 +152,8 @@
     <div class="modal-content">
       <h3 style="margin-top:0;">🔄 ログイン</h3>
       <p style="font-size:12px; color:#666;">以前作成したアカウントを引き継ぎます。</p>
-      <input type="text" id="login-name" placeholder="ニックネーム">
-      <input type="password" id="login-pass" placeholder="パスワード">
+      <input type="text" id="manual-login-name" placeholder="ニックネーム">
+      <input type="password" id="manual-login-pass" placeholder="パスワード">
       <div style="display:flex; gap:10px; margin-top:15px;">
         <button class="btn" style="background:#6c757d; flex:1; margin:0;" onclick="closeSubModal('login-modal')">戻る</button>
         <button class="btn" style="background:#00B900; flex:1; margin:0;" onclick="manualLogin()">ログイン</button>
@@ -210,6 +210,19 @@
       <div id="full-news-list" style="max-height: 60vh; overflow-y:auto; text-align:left; font-size:13px;"></div>
       <button class="btn" style="background:#6c757d; margin-top:15px;" onclick="closeSubModal('news-modal')">閉じる</button>
     </div>
+  </div>
+
+  <div id="startup-screen" class="card hidden">
+    <h1 style="color:#00B900;">ジオゲ対策クイズ</h1>
+    <p id="startup-msg" style="color:#dc3545; font-size:14px; margin-bottom:20px;">データ取得に失敗しました。<br>通信環境を確認して再試行してください。</p>
+    <button class="btn btn-city" onclick="performGuestLogin()">🚀 ゲストとして再試行する</button>
+    
+    <hr style="margin:25px 0; border:0; border-top:1px dashed #ccc;">
+    
+    <p style="font-size:13px; margin-bottom:5px; color:#666;">▼ すでに本登録済みの方はこちら</p>
+    <input type="text" id="retry-login-name" placeholder="ニックネーム">
+    <input type="password" id="retry-login-pass" placeholder="パスワード">
+    <button class="btn" style="background:#6c757d;" onclick="retryManualLogin()">ログインして再開</button>
   </div>
 
   <div id="menu-screen" class="card hidden">
@@ -393,26 +406,49 @@
     function openSubModal(id) {
       closeSettings(); document.getElementById(id).classList.remove('hidden');
       if(id === 'account-modal') {
-        document.getElementById('edit-name').value = localStorage.getItem('quiz_app_name');
-        document.getElementById('edit-pass').value = localStorage.getItem('quiz_app_pass');
+        document.getElementById('edit-name').value = localStorage.getItem('quiz_app_name') || "";
+        document.getElementById('edit-pass').value = localStorage.getItem('quiz_app_pass') || "";
       }
     }
     function closeSubModal(id) { document.getElementById(id).classList.add('hidden'); openSettings(); }
 
-    // --- 通信処理のエラーハンドリングを強化 ---
+    // --- ★エラー時に真っ白にならないようにするリカバリー関数 ---
+    function showStartupError(msg) {
+      hideLoading();
+      hideAll();
+      document.getElementById('startup-msg').innerHTML = msg + "<br>通信環境を確認して再試行してください。";
+      document.getElementById('startup-screen').classList.remove('hidden');
+    }
+
     async function performGuestLogin() {
+      showLoading("準備中...");
+      hideAll();
       try {
         const res = await fetch(`${GAS_API_URL}?action=guestLogin`).then(r => r.json());
+        
+        // ★GASのバージョンが古い（更新忘れ）場合のエラー検知
+        if (res.error === "Invalid Action") {
+          return showStartupError("【開発者エラー】<br>GASプログラムのデプロイが「新バージョン」に更新されていません。");
+        }
+        
         onDataLoaded(res);
       } catch(e) { 
-        hideLoading(); 
-        myAlert("初期設定に失敗しました。通信環境の良いところでリロードしてください。"); 
+        showStartupError("サーバーに接続できませんでした。"); 
       }
     }
 
     function manualLogin() {
-      const name = document.getElementById('login-name').value;
-      const pass = document.getElementById('login-pass').value;
+      const name = document.getElementById('manual-login-name').value;
+      const pass = document.getElementById('manual-login-pass').value;
+      if(!name || !pass) return myAlert("入力してください");
+      closeSubModal('login-modal');
+      showLoading("ログイン中...");
+      performLogin(name, pass, true);
+    }
+    
+    function retryManualLogin() {
+      const name = document.getElementById('retry-login-name').value;
+      const pass = document.getElementById('retry-login-pass').value;
       if(!name || !pass) return myAlert("入力してください");
       showLoading("ログイン中...");
       performLogin(name, pass, true);
@@ -420,7 +456,8 @@
 
     async function performLogin(name, pass, isManual = false) {
       try {
-        const res = await fetch(`${GAS_API_URL}?action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`).then(r => r.json());
+        const url = `${GAS_API_URL}?action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`;
+        const res = await fetch(url).then(r => r.json());
         
         if (res.success) {
           if (isManual) {
@@ -436,17 +473,17 @@
             hideLoading();
             myAlert(res.message);
           } else {
-            // ★自動ログイン失敗時：ローカルデータを破棄してゲストとして再出発
+            // 自動ログイン失敗時はデータを消してエラー画面へ
             localStorage.clear();
-            performGuestLogin();
+            showStartupError("アカウントが見つかりません。");
           }
         }
       } catch(e) { 
-        hideLoading(); 
-        if (isManual) myAlert("サーバーに接続できませんでした。"); 
-        else {
-          localStorage.clear();
-          performGuestLogin();
+        if (isManual) {
+          hideLoading();
+          myAlert("サーバーに接続できませんでした。"); 
+        } else {
+          showStartupError("サーバーに接続できませんでした。");
         }
       }
     }
@@ -496,8 +533,7 @@
       hideLoading();
       
       if (!res.success) {
-        myAlert(res.message || "エラーが発生しました");
-        return;
+        return showStartupError(res.message || "エラーが発生しました");
       }
 
       const currentVersion = localStorage.getItem('quiz_app_version') || 1.0;
@@ -563,7 +599,7 @@
       } catch(e) {}
     }
     
-    function hideAll() { ['menu-screen','game-screen','stats-detail-screen'].forEach(id=>document.getElementById(id).classList.add('hidden')); }
+    function hideAll() { ['startup-screen','menu-screen','game-screen','stats-detail-screen'].forEach(id=>document.getElementById(id).classList.add('hidden')); }
     function showLoading(msg) { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-overlay').classList.remove('hidden'); }
     function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
     

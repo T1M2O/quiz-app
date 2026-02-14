@@ -8,7 +8,8 @@
   <meta name="google" content="notranslate">
   <title>ジオゲ対策クイズ</title>
   
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="../manifest.json">
+  
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -396,13 +397,11 @@
       localStorage.setItem('quiz_app_vol', soundVol);
       playTone(600, 'sine', 0.1, 0.3);
     }
-    // =====================================
 
     window.onload = function() {
+      // ★アプリ化機能（PWA）の完全復活！
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) { registration.unregister(); }
-        });
+        navigator.serviceWorker.register('../sw.js');
       }
 
       const select = document.getElementById('answer-select');
@@ -447,7 +446,6 @@
     function openNewsModal() { document.getElementById('news-modal').classList.remove('hidden'); }
     function closeNewsModal() { document.getElementById('news-modal').classList.add('hidden'); }
 
-    // ★修正：ログイン関連のデータを削除する専用関数
     function clearLoginData() {
       localStorage.removeItem('quiz_app_userid');
       localStorage.removeItem('quiz_app_name');
@@ -511,7 +509,6 @@
             hideLoading();
             myAlert(res.message);
           } else {
-            // ★修正：全消去ではなく、ログイン情報だけを消してゲストで再出発！
             clearLoginData();
             performGuestLogin();
           }
@@ -521,7 +518,6 @@
           hideLoading();
           myAlert("サーバーに接続できませんでした。"); 
         } else {
-          // ★修正：通信エラー時もログイン情報だけ消す
           clearLoginData();
           showStartupError("サーバーに接続できませんでした。");
         }
@@ -578,7 +574,6 @@
         return showStartupError(res.message || "エラーが発生しました");
       }
 
-      // ★超重要：バージョン更新でリロードする【前】に、アカウント情報を保存する！
       localStorage.setItem('quiz_app_userid', res.userId);
       localStorage.setItem('quiz_app_name', res.name);
       localStorage.setItem('quiz_app_pass', res.pass);
@@ -587,7 +582,10 @@
       if (res.appVersion && parseFloat(res.appVersion) > parseFloat(currentVersion)) {
         localStorage.setItem('quiz_app_version', res.appVersion); 
         myAlert("🚀 アプリの新しいバージョンが見つかりました！最新版に更新します。");
-        setTimeout(() => { window.location.href = window.location.pathname + "?v=" + new Date().getTime(); }, 2000);
+        setTimeout(() => { 
+          // ★修正：フォルダ管理に対応！最新版がある時は「ルート（../）」に戻る！
+          window.location.href = "../"; 
+        }, 2000);
         return;
       }
       
@@ -667,7 +665,6 @@
     function backToMenu() { showMenu(); }
     
     function logout() { 
-      // ★修正：ログアウト時も全消去ではなく、ログイン情報だけを消す
       clearLoginData();
       location.reload(); 
     }

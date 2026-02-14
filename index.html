@@ -205,8 +205,7 @@
     // ★★★ここに最新のGAS URLを貼り付けてください！★★★
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzv0Gz2d0Ex0NDW8MHuHX6tCKqtGGsUfXrqhQFnar0F0Xw9y5RaFDKz13JZQTh_x2Nk/exec";
     
-    // ★スマホ側が持っているアプリのバージョン
-    const LOCAL_APP_VERSION = 1.0;
+    // ★前回のミス（HTMLにバージョンを固定書き込みしたこと）を削除しました！
 
     let myUserId = null;
     let appData = { stats: null, city: [], tourist: [], news: [], hidden: [] };
@@ -308,11 +307,17 @@
         return;
       }
 
-      // ★追加：強制アップデート機能
-      if (res.appVersion && res.appVersion > LOCAL_APP_VERSION) {
+      // ★修正：リロード地獄を防ぐ、正しい自動アップデート機能
+      // ローカルに保存されているバージョンを確認（なければ1.0とする）
+      const currentVersion = localStorage.getItem('quiz_app_version') || 1.0;
+      
+      if (res.appVersion && parseFloat(res.appVersion) > parseFloat(currentVersion)) {
+        // GASから新しいバージョンが届いたら、ローカルの記憶を最新に上書きする！
+        localStorage.setItem('quiz_app_version', res.appVersion); 
+        
         myAlert("🚀 アプリの新しいバージョンが見つかりました！最新版に更新します。");
         setTimeout(() => {
-          // キャッシュを破壊して強制リロード
+          // 強制リロードを実行（これで1回だけリロードされてループが止まります！）
           window.location.href = window.location.pathname + "?v=" + new Date().getTime();
         }, 2000);
         return;
@@ -523,6 +528,7 @@
       
       document.getElementById('res-ans').innerText = ans;
 
+      // ★解説画像エリア（アプリ内ポップアップ）
       if (currentMode === 'hidden') {
         document.getElementById('link-container').classList.add('hidden');
         

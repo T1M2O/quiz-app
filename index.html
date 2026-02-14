@@ -58,7 +58,6 @@
     .settings-list li:last-child { border-bottom: none; }
     .settings-list li span.icon { margin-right: 10px; font-size: 20px; }
     
-    /* トグルスイッチ */
     .toggle-switch { position: relative; width: 50px; height: 26px; }
     .toggle-switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
@@ -298,7 +297,7 @@
 
     const prefectures = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
 
-    // ===== サウンド機能 (通信不要のWeb Audio API) =====
+    // ===== サウンド機能 =====
     let audioCtx;
     let soundEnabled = (localStorage.getItem('quiz_app_sound') !== 'false');
     let soundVol = parseInt(localStorage.getItem('quiz_app_vol')) || 50;
@@ -312,7 +311,7 @@
 
     document.addEventListener('click', function(e) {
       if (e.target.closest('.btn') || e.target.closest('.settings-list li') || e.target.closest('.settings-icon')) {
-        playTone(600, 'sine', 0.05, 0.3); // ボタンクリック音
+        playTone(600, 'sine', 0.05, 0.3);
       }
     });
 
@@ -375,10 +374,12 @@
       const storedName = localStorage.getItem('quiz_app_name');
       const storedPass = localStorage.getItem('quiz_app_pass');
       
-      // ★起動時の振り分け（ログイン済みなら普通に、初見ならゲストとして裏で登録）
+      // ★起動時の振り分け（ログイン画面は廃止）
       if (storedId && storedName && storedPass) {
-        performLogin(storedName, storedPass);
+        // 自動ログイン
+        performLogin(storedName, storedPass, false);
       } else {
+        // 初見はゲスト作成へ
         performGuestLogin();
       }
     };
@@ -415,25 +416,45 @@
       performLogin(name, pass, true);
     }
 
+    // ★自動ログイン失敗時にループしないよう修正
     async function performLogin(name, pass, isManual = false) {
       try {
-        const res = await fetch(`${GAS_API_URL}?action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`).then(r => r.json());
-        if(isManual && res.success) {
-          // 手動ログイン時はストレージを上書きして再読込
-          localStorage.setItem('quiz_app_userid', res.userId);
-          localStorage.setItem('quiz_app_name', res.name);
-          localStorage.setItem('quiz_app_pass', res.pass);
-          window.location.reload();
+        const url = `${GAS_API_URL}?action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`;
+        const res = await fetch(url).then(r => r.json());
+        
+        if (res.success) {
+          if (isManual) {
+            localStorage.setItem('quiz_app_userid', res.userId);
+            localStorage.setItem('quiz_app_name', res.name);
+            localStorage.setItem('quiz_app_pass', res.pass);
+            window.location.reload();
+          } else {
+            onDataLoaded(res);
+          }
         } else {
-          onDataLoaded(res);
+          // ログイン失敗時
+          if (isManual) {
+            hideLoading();
+            myAlert(res.message);
+          } else {
+            // 自動ログインに失敗した場合は、ローカルデータを消してゲストとして再出発
+            localStorage.removeItem('quiz_app_userid');
+            localStorage.removeItem('quiz_app_name');
+            localStorage.removeItem('quiz_app_pass');
+            performGuestLogin();
+          }
         }
-      } catch(e) { hideLoading(); myAlert("通信エラーが発生しました。"); }
+      } catch(e) { 
+        hideLoading(); 
+        if (isManual) myAlert("通信エラーが発生しました。"); 
+        else myAlert("サーバーに接続できません。通信環境を確認してください。"); 
+      }
     }
 
     async function updateAccount() {
       const newName = document.getElementById('edit-name').value;
       const newPass = document.getElementById('edit-pass').value;
-      if (!newName || !newPass) return myAlert("空欄があります");
+      if (!newName || !newPass) return myAlert("ニックネームとパスワードの両方を入力してください。");
       showLoading("更新中...");
       try {
         const res = await fetch(`${GAS_API_URL}?action=updateAccount&userId=${myUserId}&newName=${encodeURIComponent(newName)}&newPass=${encodeURIComponent(newPass)}`).then(r => r.json());
@@ -453,7 +474,7 @@
         const res = await fetch(`${GAS_API_URL}?action=deleteAccount&userId=${myUserId}`).then(r => r.json());
         hideLoading();
         if (res.success) {
-          alert("アカウントを完全に削除しました。"); // ネイティブアラートで確実に止める
+          alert("アカウントを完全に削除しました。"); 
           logout();
         } else { myAlert(res.message); }
       } catch(e) { hideLoading(); myAlert("通信エラーが発生しました"); }
@@ -473,11 +494,7 @@
 
     function onDataLoaded(res) {
       hideLoading();
-      if (!res.success) {
-        myAlert(res.message);
-        document.getElementById('loading-overlay').classList.add('hidden'); // 失敗時は隠す
-        return;
-      }
+      
       const currentVersion = localStorage.getItem('quiz_app_version') || 1.0;
       if (res.appVersion && parseFloat(res.appVersion) > parseFloat(currentVersion)) {
         localStorage.setItem('quiz_app_version', res.appVersion); 
@@ -485,6 +502,7 @@
         setTimeout(() => { window.location.href = window.location.pathname + "?v=" + new Date().getTime(); }, 2000);
         return;
       }
+      
       localStorage.setItem('quiz_app_userid', res.userId);
       localStorage.setItem('quiz_app_name', res.name);
       localStorage.setItem('quiz_app_pass', res.pass);
@@ -500,7 +518,6 @@
       hideAll(); document.getElementById('menu-screen').classList.remove('hidden');
       if(appData.stats) document.getElementById('menu-stats').innerHTML = `<div class="stats-item">正解数: <span>${appData.stats.total.correct}</span></div><div class="stats-item">正解率: <span>${appData.stats.total.rate}%</span></div>`;
       
-      // お知らせの描画（3件だけトップに、残りはモーダルに）
       if (appData.news && appData.news.length > 0) {
         document.getElementById('news-box').classList.remove('hidden');
         let topHtml = ''; let fullHtml = '';

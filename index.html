@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
   <title>ジオゲ対策クイズ</title>
   
   <link rel="manifest" href="manifest.json">
@@ -14,7 +16,6 @@
   <link rel="icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f5fe.png">
 
   <style>
-    /* 共通スタイル */
     body { font-family: "Helvetica Neue", Arial, sans-serif; text-align: center; background-color: #f0f8ff; margin: 0; padding: 20px; color: #333; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
     .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; min-height: 500px; display: flex; flex-direction: column; position: relative; }
     input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: white; -webkit-appearance: none; appearance: none; }
@@ -33,7 +34,6 @@
     .stats-bar { display: flex; justify-content: space-around; background: #333; color: white; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; }
     .stats-item span { font-size: 18px; font-weight: bold; color: #ffc107; margin-left: 5px; }
     
-    /* クイズ・結果画面 */
     .quiz-header { font-size: 14px; color: #666; margin-bottom: 5px; }
     .quiz-text { font-size: 24px; font-weight: bold; margin: 15px 0; min-height: 1.2em; line-height: 1.4; white-space: pre-wrap; }
     .quiz-img { max-height: 200px; width: auto; max-width: 100%; border-radius: 8px; object-fit: contain; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -43,9 +43,7 @@
     .res-text { font-size: 32px; font-weight: bold; margin-bottom: 20px; }
     .correct-box { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 20px; width: 80%; }
     
-    /* お知らせ・モーダル */
-    .news-box { text-align: left; background: #fff3cd; border: 1px solid #ffeeba; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; max-height: 100px; overflow-y: auto; }
-    .news-box h3 { margin: 0 0 5px 0; font-size: 14px; color: #856404; }
+    .news-box { text-align: left; background: #fff3cd; border: 1px solid #ffeeba; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; max-height: 150px; overflow-y: hidden; }
     .news-item { margin-bottom: 4px; color: #555; }
     .news-date { font-weight: bold; margin-right: 5px; color: #856404; }
 
@@ -60,7 +58,7 @@
     .settings-list li:last-child { border-bottom: none; }
     .settings-list li span.icon { margin-right: 10px; font-size: 20px; }
     
-    /* トグルスイッチ用 */
+    /* トグルスイッチ */
     .toggle-switch { position: relative; width: 50px; height: 26px; }
     .toggle-switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
@@ -76,7 +74,6 @@
     .progress-bg { background: #e9ecef; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 5px; }
     .progress-bar { height: 100%; width: 0%; transition: width 0.5s; }
     
-    /* 使い方説明用 */
     .help-section { text-align: left; margin-bottom: 15px; font-size: 14px; color: #444; border-bottom: 1px dashed #eee; padding-bottom: 10px; }
     .help-section h4 { margin: 0 0 5px 0; color: #007bff; }
   </style>
@@ -96,12 +93,18 @@
     </div>
   </div>
 
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <div id="loading-text" style="font-size:18px; font-weight:bold;">準備中...</div>
+  </div>
+
   <div id="settings-modal" class="modal-overlay hidden">
     <div class="modal-content" style="padding:15px;">
       <h3 style="margin-top:0; border-bottom:2px solid #007bff; padding-bottom:5px;">⚙️ 設定</h3>
       <ul class="settings-list">
         <li onclick="openSubModal('sound-modal')"><span class="icon">🎵</span> サウンド設定</li>
-        <li onclick="openSubModal('account-modal')"><span class="icon">👤</span> アカウント情報変更</li>
+        <li onclick="openSubModal('account-modal')"><span class="icon">👤</span> アカウント登録 / 変更</li>
+        <li onclick="openSubModal('login-modal')"><span class="icon">🔄</span> 既存アカウントでログイン</li>
         <li onclick="openSubModal('admin-modal')"><span class="icon">🔑</span> 管理者モード</li>
         <li onclick="openSubModal('help-modal')"><span class="icon">📖</span> 使い方説明</li>
         <li onclick="logout()" style="color:#dc3545;"><span class="icon">🚪</span> ログアウト</li>
@@ -121,9 +124,12 @@
           <span class="slider"></span>
         </label>
       </div>
-      <div style="margin-bottom: 30px; text-align:left;">
-        <label style="font-weight:bold; display:block; margin-bottom:10px;">音量</label>
-        <input type="range" id="sound-vol" min="0" max="100" value="50" style="width:100%;" onchange="changeVolume()">
+      <div id="volume-container" style="margin-bottom: 30px; text-align:left;">
+        <label style="font-weight:bold; display:flex; justify-content:space-between; margin-bottom:10px;">
+          <span>音量</span>
+          <span id="vol-display" style="color:#007bff; font-size:18px;">50</span>
+        </label>
+        <input type="range" id="sound-vol" min="0" max="100" step="1" value="50" style="width:100%; margin:0;" oninput="changeVolume()" onchange="saveVolume()">
       </div>
       <button class="btn" style="background:#6c757d; margin:0;" onclick="closeSubModal('sound-modal')">戻る</button>
     </div>
@@ -131,10 +137,10 @@
 
   <div id="account-modal" class="modal-overlay hidden">
     <div class="modal-content">
-      <h3 style="margin-top:0;">👤 アカウント変更</h3>
-      <p style="font-size:12px; color:#666;">新しい名前やパスワードを入力してください。<br>（変更しない項目はそのまま）</p>
-      <input type="text" id="edit-name" placeholder="新しいニックネーム">
-      <input type="password" id="edit-pass" placeholder="新しいパスワード">
+      <h3 style="margin-top:0;">👤 アカウント情報</h3>
+      <p style="font-size:12px; color:#666;">お好きなニックネームとパスワードを設定して、データを引き継げる本登録をしましょう！</p>
+      <input type="text" id="edit-name" placeholder="ニックネーム">
+      <input type="password" id="edit-pass" placeholder="パスワード">
       <div style="display:flex; gap:10px; margin-top:15px;">
         <button class="btn" style="background:#6c757d; flex:1; margin:0;" onclick="closeSubModal('account-modal')">戻る</button>
         <button class="btn" style="background:#00B900; flex:1; margin:0;" onclick="updateAccount()">保存</button>
@@ -142,10 +148,23 @@
     </div>
   </div>
 
+  <div id="login-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">🔄 ログイン</h3>
+      <p style="font-size:12px; color:#666;">以前作成したアカウントを引き継ぎます。</p>
+      <input type="text" id="login-name" placeholder="ニックネーム">
+      <input type="password" id="login-pass" placeholder="パスワード">
+      <div style="display:flex; gap:10px; margin-top:15px;">
+        <button class="btn" style="background:#6c757d; flex:1; margin:0;" onclick="closeSubModal('login-modal')">戻る</button>
+        <button class="btn" style="background:#00B900; flex:1; margin:0;" onclick="manualLogin()">ログイン</button>
+      </div>
+    </div>
+  </div>
+
   <div id="delete-modal" class="modal-overlay hidden">
     <div class="modal-content">
       <h3 style="margin-top:0; color:#dc3545;">⚠️ アカウント削除</h3>
-      <p style="font-size:13px; color:#333; line-height:1.5;">本当にアカウントを削除しますか？<br>この操作は取り消せません。学習記録もすべて消去されます。</p>
+      <p style="font-size:13px; color:#333; line-height:1.5;">本当にアカウントを削除しますか？<br>この操作は取り消せません。</p>
       <input type="text" id="delete-confirm" placeholder="「削除」と入力してください" style="border-color:#dc3545;">
       <div style="display:flex; gap:10px; margin-top:15px;">
         <button class="btn" style="background:#6c757d; flex:1; margin:0;" onclick="closeSubModal('delete-modal')">戻る</button>
@@ -155,11 +174,10 @@
   </div>
 
   <div id="help-modal" class="modal-overlay hidden">
-    <div class="modal-content">
+    <div class="modal-content" style="max-height: 70vh;">
       <h3 style="margin-top:0;">📖 使い方説明</h3>
-      
       <div class="help-section">
-        <h4>🏙 市町村クイズ / ⛩️ 観光地クイズ</h4>
+        <h4>🏙 市町村 / ⛩️ 観光地クイズ</h4>
         表示された画像の場所がどの都道府県にあるかを当てるクイズです。不正解だった問題は自動で記録されます。
       </div>
       <div class="help-section">
@@ -167,10 +185,9 @@
         これまでに間違えた問題だけがランダムに出題されます。正解すると苦手リストから消去されます。
       </div>
       <div class="help-section">
-        <h4>📊 統計データ</h4>
-        あなたのこれまでのクイズの正解率や回答数を確認することができます。
+        <h4>👤 アカウントについて</h4>
+        初回はログイン不要で遊べますが、設定（⚙️）から名前を登録すると、他の端末にデータを引き継げます。
       </div>
-      
       <button class="btn" style="background:#6c757d; margin:0; margin-top:15px;" onclick="closeSubModal('help-modal')">閉じる</button>
     </div>
   </div>
@@ -186,25 +203,23 @@
       </div>
     </div>
   </div>
-  <div id="loading-overlay" class="loading-overlay hidden">
-    <div class="spinner"></div>
-    <div id="loading-text" style="font-size:18px; font-weight:bold;">読み込み中...</div>
-  </div>
 
-  <div id="login-screen" class="card">
-    <h1 style="color:#00B900;">ジオゲ対策クイズ</h1>
-    <p>登録したアカウントでログイン</p>
-    <input type="text" id="login-name" placeholder="ニックネーム">
-    <input type="password" id="login-pass" placeholder="パスワード">
-    <button class="btn" onclick="manualLogin()">ログイン</button>
+  <div id="news-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">📢 お知らせ一覧</h3>
+      <div id="full-news-list" style="max-height: 60vh; overflow-y:auto; text-align:left; font-size:13px;"></div>
+      <button class="btn" style="background:#6c757d; margin-top:15px;" onclick="closeSubModal('news-modal')">閉じる</button>
+    </div>
   </div>
-
   <div id="menu-screen" class="card hidden">
     <div class="settings-icon" onclick="openSettings()">⚙️</div>
     <div class="stats-bar" id="menu-stats" style="margin-top:30px;"></div>
     
     <div id="news-box" class="news-box hidden">
-      <h3>📢 お知らせ</h3>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h3 style="margin:0;">📢 お知らせ</h3>
+        <button class="btn" style="padding:4px 8px; margin:0; width:auto; font-size:11px; background:#6c757d; border-radius:4px;" onclick="openSubModal('news-modal')">お知らせ一覧</button>
+      </div>
       <div id="news-list"></div>
     </div>
 
@@ -261,7 +276,6 @@
       <div class="correct-box">
         <span style="font-size:12px; color:#666;">正解は...</span><br>
         <span id="res-ans" style="font-size:28px; font-weight:bold; color:#007bff; display:block; margin-bottom:10px;"></span>
-        
         <div id="exp-img-container"></div>
       </div>
       
@@ -275,22 +289,16 @@
   </div>
 
   <script>
-    // ★★★ 指定のGAS API URL ★★★
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzv0Gz2d0Ex0NDW8MHuHX6tCKqtGGsUfXrqhQFnar0F0Xw9y5RaFDKz13JZQTh_x2Nk/exec";
     
-    const LOCAL_APP_VERSION = 1.1;
-
     let myUserId = null;
     let appData = { stats: null, city: [], tourist: [], news: [], hidden: [] };
-    let currentMode = null;
-    let currentQuestion = null;
-    let wrongList = null; 
-    let currentChoices = []; 
-    let hiddenQueue = []; 
+    let currentMode = null; let currentQuestion = null; let wrongList = null; 
+    let currentChoices = []; let hiddenQueue = []; 
 
     const prefectures = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
 
-    // ===== サウンド機能 (Web Audio API) =====
+    // ===== サウンド機能 (通信不要のWeb Audio API) =====
     let audioCtx;
     let soundEnabled = (localStorage.getItem('quiz_app_sound') !== 'false');
     let soundVol = parseInt(localStorage.getItem('quiz_app_vol')) || 50;
@@ -302,10 +310,9 @@
     document.addEventListener('touchstart', initAudio, { once: true });
     document.addEventListener('click', initAudio, { once: true });
 
-    // 画面タップでポチッと鳴らす
     document.addEventListener('click', function(e) {
       if (e.target.closest('.btn') || e.target.closest('.settings-list li') || e.target.closest('.settings-icon')) {
-        playTone(600, 'sine', 0.05, 0.3); // クリック音
+        playTone(600, 'sine', 0.05, 0.3); // ボタンクリック音
       }
     });
 
@@ -318,166 +325,159 @@
       const actualVol = (soundVol / 100) * volScale;
       gain.gain.setValueAtTime(actualVol, audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + duration);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(); osc.stop(audioCtx.currentTime + duration);
     }
 
-    function playCorrectSound() {
-      playTone(880, 'sine', 0.1, 0.5); 
-      setTimeout(() => playTone(1108, 'sine', 0.3, 0.5), 100);
-    }
-    function playWrongSound() {
-      playTone(300, 'sawtooth', 0.3, 0.5); 
-    }
+    function playCorrectSound() { playTone(880, 'sine', 0.1, 0.5); setTimeout(() => playTone(1108, 'sine', 0.3, 0.5), 100); }
+    function playWrongSound() { playTone(300, 'sawtooth', 0.3, 0.5); }
 
+    function updateVolUI() {
+      const volContainer = document.getElementById('volume-container');
+      const volSlider = document.getElementById('sound-vol');
+      const volDisplay = document.getElementById('vol-display');
+      if (soundEnabled) {
+        volContainer.style.opacity = "1"; volContainer.style.pointerEvents = "auto";
+        volSlider.disabled = false; volDisplay.innerText = soundVol;
+      } else {
+        volContainer.style.opacity = "0.4"; volContainer.style.pointerEvents = "none";
+        volSlider.disabled = true; volDisplay.innerText = "OFF";
+      }
+    }
     function toggleSound() {
       soundEnabled = document.getElementById('sound-toggle').checked;
       localStorage.setItem('quiz_app_sound', soundEnabled);
+      updateVolUI();
       if(soundEnabled) { initAudio(); playTone(880, 'sine', 0.1, 0.3); }
     }
     function changeVolume() {
       soundVol = document.getElementById('sound-vol').value;
+      document.getElementById('vol-display').innerText = soundVol;
+    }
+    function saveVolume() {
       localStorage.setItem('quiz_app_vol', soundVol);
       playTone(600, 'sine', 0.1, 0.3);
     }
     // =====================================
 
     window.onload = function() {
-      if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
       const select = document.getElementById('answer-select');
       prefectures.forEach(pref => {
-        const option = document.createElement('option');
-        option.value = pref; option.textContent = pref; select.appendChild(option);
+        const option = document.createElement('option'); option.value = pref; option.textContent = pref; select.appendChild(option);
       });
       
-      // サウンド設定のUI反映
       document.getElementById('sound-toggle').checked = soundEnabled;
       document.getElementById('sound-vol').value = soundVol;
+      updateVolUI();
 
+      const storedId = localStorage.getItem('quiz_app_userid');
       const storedName = localStorage.getItem('quiz_app_name');
       const storedPass = localStorage.getItem('quiz_app_pass');
-      if (storedName && storedPass) { performLogin(storedName, storedPass); }
-      else { document.getElementById('login-screen').classList.remove('hidden'); }
+      
+      // ★起動時の振り分け（ログイン済みなら普通に、初見ならゲストとして裏で登録）
+      if (storedId && storedName && storedPass) {
+        performLogin(storedName, storedPass);
+      } else {
+        performGuestLogin();
+      }
     };
 
-    function myAlert(msg) {
-      document.getElementById('alert-msg').innerText = msg;
-      document.getElementById('custom-alert').classList.remove('hidden');
-    }
+    function myAlert(msg) { document.getElementById('alert-msg').innerText = msg; document.getElementById('custom-alert').classList.remove('hidden'); }
     function closeAlert() { document.getElementById('custom-alert').classList.add('hidden'); }
-
     function openImageViewer(src) { document.getElementById('viewer-img').src = src; document.getElementById('image-viewer').classList.remove('hidden'); }
     function closeImageViewer() { document.getElementById('image-viewer').classList.add('hidden'); document.getElementById('viewer-img').src = ""; }
 
-    // モーダル管理
     function openSettings() { document.getElementById('settings-modal').classList.remove('hidden'); }
     function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
-    
     function openSubModal(id) {
-      closeSettings();
-      document.getElementById(id).classList.remove('hidden');
+      closeSettings(); document.getElementById(id).classList.remove('hidden');
       if(id === 'account-modal') {
         document.getElementById('edit-name').value = localStorage.getItem('quiz_app_name');
         document.getElementById('edit-pass').value = localStorage.getItem('quiz_app_pass');
       }
     }
-    function closeSubModal(id) {
-      document.getElementById(id).classList.add('hidden');
-      openSettings(); // 閉じたらメイン設定に戻る
-    }
-    
-    // --- アカウント情報変更 ---
-    async function updateAccount() {
-      const newName = document.getElementById('edit-name').value;
-      const newPass = document.getElementById('edit-pass').value;
-      const oldName = localStorage.getItem('quiz_app_name');
-      if (!newName || !newPass) return myAlert("空欄があります");
-      
-      showLoading("更新中...");
-      try {
-        const url = `${GAS_API_URL}?action=updateAccount&userId=${myUserId}&oldName=${encodeURIComponent(oldName)}&newName=${encodeURIComponent(newName)}&newPass=${encodeURIComponent(newPass)}`;
-        const res = await fetch(url).then(r => r.json());
-        hideLoading();
-        if (res.success) {
-          localStorage.setItem('quiz_app_name', newName);
-          localStorage.setItem('quiz_app_pass', newPass);
-          myAlert("アカウント情報を更新しました！");
-          closeSubModal('account-modal');
-        } else {
-          myAlert(res.message);
-        }
-      } catch(e) { hideLoading(); myAlert("通信エラーが発生しました"); }
-    }
+    function closeSubModal(id) { document.getElementById(id).classList.add('hidden'); openSettings(); }
 
-    // --- アカウント削除 ---
-    async function deleteAccount() {
-      const confirmText = document.getElementById('delete-confirm').value;
-      if (confirmText !== "削除") return myAlert("「削除」と入力してください");
-      
-      const oldName = localStorage.getItem('quiz_app_name');
-      showLoading("アカウント削除中...");
+    // --- 各種APIリクエスト ---
+    async function performGuestLogin() {
       try {
-        const url = `${GAS_API_URL}?action=deleteAccount&userId=${myUserId}&oldName=${encodeURIComponent(oldName)}`;
-        const res = await fetch(url).then(r => r.json());
-        hideLoading();
-        if (res.success) {
-          alert("アカウントを完全に削除しました。ご利用ありがとうございました。"); // ここはネイティブで止める
-          logout();
-        } else {
-          myAlert(res.message);
-        }
-      } catch(e) { hideLoading(); myAlert("通信エラーが発生しました"); }
-    }
-
-    // 管理者モード
-    async function checkAdmin() {
-      const pass = document.getElementById('admin-pass-input').value;
-      if (!pass) return myAlert("キーを入力してください");
-      
-      showLoading("認証中...");
-      try {
-        const url = `${GAS_API_URL}?action=checkAdmin&pass=${encodeURIComponent(pass)}`;
-        const res = await fetch(url).then(r => r.json());
-        hideLoading();
-        document.getElementById('admin-modal').classList.add('hidden');
-        
-        if (res.success) {
-          appData.hidden = res.hiddenQuiz;
-          startHiddenQuiz(); 
-        } else { myAlert(res.message); }
-      } catch(e) { hideLoading(); myAlert("通信エラーが発生しました。"); }
+        const res = await fetch(`${GAS_API_URL}?action=guestLogin`).then(r => r.json());
+        onDataLoaded(res);
+      } catch(e) { myAlert("通信エラーが発生しました。"); }
     }
 
     function manualLogin() {
       const name = document.getElementById('login-name').value;
       const pass = document.getElementById('login-pass').value;
       if(!name || !pass) return myAlert("入力してください");
-      performLogin(name, pass);
+      showLoading("ログイン中...");
+      performLogin(name, pass, true);
     }
 
-    async function performLogin(name, pass) {
-      showLoading("データをダウンロード中...");
+    async function performLogin(name, pass, isManual = false) {
       try {
-        const url = `${GAS_API_URL}?action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`;
-        const res = await fetch(url).then(r => r.json());
-        onDataLoaded(res, name, pass);
-      } catch(e) {
-        hideLoading();
-        myAlert("通信エラーが発生しました。");
-        document.getElementById('login-screen').classList.remove('hidden');
-      }
+        const res = await fetch(`${GAS_API_URL}?action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`).then(r => r.json());
+        if(isManual && res.success) {
+          // 手動ログイン時はストレージを上書きして再読込
+          localStorage.setItem('quiz_app_userid', res.userId);
+          localStorage.setItem('quiz_app_name', res.name);
+          localStorage.setItem('quiz_app_pass', res.pass);
+          window.location.reload();
+        } else {
+          onDataLoaded(res);
+        }
+      } catch(e) { hideLoading(); myAlert("通信エラーが発生しました。"); }
     }
 
-    function onDataLoaded(res, name, pass) {
+    async function updateAccount() {
+      const newName = document.getElementById('edit-name').value;
+      const newPass = document.getElementById('edit-pass').value;
+      if (!newName || !newPass) return myAlert("空欄があります");
+      showLoading("更新中...");
+      try {
+        const res = await fetch(`${GAS_API_URL}?action=updateAccount&userId=${myUserId}&newName=${encodeURIComponent(newName)}&newPass=${encodeURIComponent(newPass)}`).then(r => r.json());
+        hideLoading();
+        if (res.success) {
+          localStorage.setItem('quiz_app_name', newName); localStorage.setItem('quiz_app_pass', newPass);
+          myAlert("アカウント情報を更新しました！"); closeSubModal('account-modal');
+        } else { myAlert(res.message); }
+      } catch(e) { hideLoading(); myAlert("通信エラーが発生しました"); }
+    }
+
+    async function deleteAccount() {
+      const confirmText = document.getElementById('delete-confirm').value;
+      if (confirmText !== "削除") return myAlert("「削除」と入力してください");
+      showLoading("削除中...");
+      try {
+        const res = await fetch(`${GAS_API_URL}?action=deleteAccount&userId=${myUserId}`).then(r => r.json());
+        hideLoading();
+        if (res.success) {
+          alert("アカウントを完全に削除しました。"); // ネイティブアラートで確実に止める
+          logout();
+        } else { myAlert(res.message); }
+      } catch(e) { hideLoading(); myAlert("通信エラーが発生しました"); }
+    }
+
+    async function checkAdmin() {
+      const pass = document.getElementById('admin-pass-input').value;
+      if (!pass) return myAlert("キーを入力してください");
+      showLoading("認証中...");
+      try {
+        const res = await fetch(`${GAS_API_URL}?action=checkAdmin&pass=${encodeURIComponent(pass)}`).then(r => r.json());
+        hideLoading(); document.getElementById('admin-modal').classList.add('hidden');
+        if (res.success) { appData.hidden = res.hiddenQuiz; startHiddenQuiz(); } 
+        else { myAlert(res.message); }
+      } catch(e) { hideLoading(); myAlert("通信エラーが発生しました。"); }
+    }
+
+    function onDataLoaded(res) {
       hideLoading();
       if (!res.success) {
         myAlert(res.message);
-        document.getElementById('login-screen').classList.remove('hidden');
+        document.getElementById('loading-overlay').classList.add('hidden'); // 失敗時は隠す
         return;
       }
-
       const currentVersion = localStorage.getItem('quiz_app_version') || 1.0;
       if (res.appVersion && parseFloat(res.appVersion) > parseFloat(currentVersion)) {
         localStorage.setItem('quiz_app_version', res.appVersion); 
@@ -485,86 +485,69 @@
         setTimeout(() => { window.location.href = window.location.pathname + "?v=" + new Date().getTime(); }, 2000);
         return;
       }
-
       localStorage.setItem('quiz_app_userid', res.userId);
-      localStorage.setItem('quiz_app_name', name);
-      localStorage.setItem('quiz_app_pass', pass);
+      localStorage.setItem('quiz_app_name', res.name);
+      localStorage.setItem('quiz_app_pass', res.pass);
       
-      myUserId = res.userId;
-      appData.stats = res.stats;
-      appData.city = res.masterData.city;
-      appData.tourist = res.masterData.tourist;
-      appData.news = res.news || []; 
-      
+      myUserId = res.userId; appData.stats = res.stats; appData.city = res.masterData.city;
+      appData.tourist = res.masterData.tourist; appData.news = res.news || []; 
       wrongList = null;
-      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('loading-overlay').classList.add('hidden');
       showMenu();
     }
 
     function showMenu() {
-      hideAll(); 
-      document.getElementById('menu-screen').classList.remove('hidden');
-      const s = appData.stats;
-      if(s) document.getElementById('menu-stats').innerHTML = `<div class="stats-item">正解数: <span>${s.total.correct}</span></div><div class="stats-item">正解率: <span>${s.total.rate}%</span></div>`;
+      hideAll(); document.getElementById('menu-screen').classList.remove('hidden');
+      if(appData.stats) document.getElementById('menu-stats').innerHTML = `<div class="stats-item">正解数: <span>${appData.stats.total.correct}</span></div><div class="stats-item">正解率: <span>${appData.stats.total.rate}%</span></div>`;
       
-      const newsBox = document.getElementById('news-box');
-      const newsList = document.getElementById('news-list');
+      // お知らせの描画（3件だけトップに、残りはモーダルに）
       if (appData.news && appData.news.length > 0) {
-        newsBox.classList.remove('hidden');
-        let html = '';
-        appData.news.forEach(n => { html += `<div class="news-item"><span class="news-date">${n.date}</span> ${n.msg}</div>`; });
-        newsList.innerHTML = html;
-      } else {
-        newsBox.classList.add('hidden');
-      }
+        document.getElementById('news-box').classList.remove('hidden');
+        let topHtml = ''; let fullHtml = '';
+        appData.news.forEach((n, i) => { 
+          if(i < 3) topHtml += `<div class="news-item"><span class="news-date">${n.date}</span> ${n.msg}</div>`; 
+          fullHtml += `<div class="news-item" style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;"><span class="news-date" style="display:block; margin-bottom:3px;">${n.date}</span> ${n.msg}</div>`;
+        });
+        document.getElementById('news-list').innerHTML = topHtml;
+        document.getElementById('full-news-list').innerHTML = fullHtml;
+      } else { document.getElementById('news-box').classList.add('hidden'); }
     }
 
     async function startReview() {
       if (wrongList === null) {
         showLoading("復習データを取得中...");
         try {
-          const url = `${GAS_API_URL}?action=getWrongList&userId=${myUserId}`;
-          const res = await fetch(url).then(r => r.json());
-          if (res.wrongList) { wrongList = res.wrongList; } else { throw new Error(); }
+          const res = await fetch(`${GAS_API_URL}?action=getWrongList&userId=${myUserId}`).then(r => r.json());
+          if (res.wrongList) wrongList = res.wrongList; else throw new Error();
           hideLoading();
         } catch(e) { hideLoading(); return myAlert("データ取得エラーが発生しました。"); }
       }
       if (wrongList.length === 0) return myAlert("復習する問題がありません！優秀！");
-      
-      currentMode = 'review';
-      document.getElementById('review-banner').classList.remove('hidden');
-      nextQuestion();
-      hideAll(); document.getElementById('game-screen').classList.remove('hidden');
+      currentMode = 'review'; document.getElementById('review-banner').classList.remove('hidden');
+      nextQuestion(); hideAll(); document.getElementById('game-screen').classList.remove('hidden');
     }
 
     function startHiddenQuiz() {
-      currentMode = 'hidden';
-      document.getElementById('review-banner').classList.add('hidden');
-      hiddenQueue = [...appData.hidden];
-      hiddenQueue.sort(() => Math.random() - 0.5);
-      nextQuestion();
-      hideAll(); 
-      document.getElementById('game-screen').classList.remove('hidden'); 
+      currentMode = 'hidden'; document.getElementById('review-banner').classList.add('hidden');
+      hiddenQueue = [...appData.hidden]; hiddenQueue.sort(() => Math.random() - 0.5);
+      nextQuestion(); hideAll(); document.getElementById('game-screen').classList.remove('hidden'); 
     }
 
     async function syncScore(isCorrect, syncType, wrongId) {
       if (currentMode === 'hidden') return; 
-      const url = `${GAS_API_URL}?action=sync&userId=${myUserId}&mode=${currentMode}&isCorrect=${isCorrect}&syncType=${syncType}&wrongId=${encodeURIComponent(wrongId)}`;
       try {
-        const res = await fetch(url).then(r => r.json());
+        const res = await fetch(`${GAS_API_URL}?action=sync&userId=${myUserId}&mode=${currentMode}&isCorrect=${isCorrect}&syncType=${syncType}&wrongId=${encodeURIComponent(wrongId)}`).then(r => r.json());
         if(res) appData.stats = res;
       } catch(e) {}
     }
     
-    function hideAll() { ['login-screen','menu-screen','game-screen','stats-detail-screen'].forEach(id=>document.getElementById(id).classList.add('hidden')); }
+    function hideAll() { ['menu-screen','game-screen','stats-detail-screen'].forEach(id=>document.getElementById(id).classList.add('hidden')); }
     function showLoading(msg) { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-overlay').classList.remove('hidden'); }
     function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
     
     function showStatsDetail() {
       hideAll(); document.getElementById('stats-detail-screen').classList.remove('hidden');
-      const s = appData.stats;
-      const html = `${createStatsCard("総合データ", s.total, "#007bff")}${createStatsCard("🏙 市町村クイズ", s.city, "#28a745")}${createStatsCard("⛩️ 観光地クイズ", s.tourist, "#e67e22")}`;
-      document.getElementById('stats-content').innerHTML = html;
+      document.getElementById('stats-content').innerHTML = `${createStatsCard("総合データ", appData.stats.total, "#007bff")}${createStatsCard("🏙 市町村クイズ", appData.stats.city, "#28a745")}${createStatsCard("⛩️ 観光地クイズ", appData.stats.tourist, "#e67e22")}`;
     }
 
     function createStatsCard(title, obj, color) {
@@ -577,62 +560,41 @@
       const dataset = (mode === 'city') ? appData.city : appData.tourist;
       if (!dataset || dataset.length === 0) return myAlert("データがありません");
       document.getElementById('review-banner').classList.add('hidden');
-      nextQuestion();
-      hideAll(); document.getElementById('game-screen').classList.remove('hidden');
+      nextQuestion(); hideAll(); document.getElementById('game-screen').classList.remove('hidden');
     }
     
     function backToMenu() { showMenu(); }
-    
-    function logout() { 
-      localStorage.removeItem('quiz_app_userid'); 
-      localStorage.removeItem('quiz_app_name'); 
-      localStorage.removeItem('quiz_app_pass'); 
-      location.reload(); 
-    }
+    function logout() { localStorage.clear(); location.reload(); }
 
     function nextQuestion() {
       document.getElementById('result-overlay').classList.add('hidden');
-      let q = null;
-      
       if (currentMode === 'hidden') {
-        document.getElementById('normal-answer-area').classList.add('hidden');
-        document.getElementById('hidden-answer-area').classList.remove('hidden');
-        document.getElementById('q-header').innerText = "㊙️ 隠しクイズ ㊙️";
-        document.getElementById('st-correct').innerText = "㊙️"; 
-        document.getElementById('st-rate').innerText = "隠れ";
-      } else {
-        document.getElementById('normal-answer-area').classList.remove('hidden');
-        document.getElementById('hidden-answer-area').classList.add('hidden');
-        document.getElementById('q-header').innerText = "この場所がある都道府県は？";
-      }
-
-      if (currentMode === 'hidden') {
+        document.getElementById('normal-answer-area').classList.add('hidden'); document.getElementById('hidden-answer-area').classList.remove('hidden');
+        document.getElementById('q-header').innerText = "㊙️ 隠しクイズ ㊙️"; document.getElementById('st-correct').innerText = "㊙️"; document.getElementById('st-rate').innerText = "隠れ";
         if (hiddenQueue.length === 0) {
           document.getElementById('q-text').innerText = "すべての隠しクイズをクリアしました！🎉\nもう問題はありません。";
-          document.getElementById('q-img-container').innerHTML = "";
-          document.getElementById('hidden-answer-area').classList.add('hidden'); 
+          document.getElementById('q-img-container').innerHTML = ""; document.getElementById('hidden-answer-area').classList.add('hidden'); 
           return;
         }
-        q = hiddenQueue.pop();
-        currentChoices = [q.a, q.w1, q.w2, q.w3];
-        currentChoices.sort(() => Math.random() - 0.5); 
+        currentQuestion = hiddenQueue.pop();
+        currentChoices = [currentQuestion.a, currentQuestion.w1, currentQuestion.w2, currentQuestion.w3].sort(() => Math.random() - 0.5); 
         for (let i = 0; i < 4; i++) { document.getElementById('btn-choice-' + i).innerText = currentChoices[i]; }
-
-      } else if (currentMode === 'review') {
-        if (!wrongList || wrongList.length === 0) { myAlert("復習完了！メニューに戻ります。"); return backToMenu(); }
-        const randKey = wrongList[Math.floor(Math.random() * wrongList.length)];
-        q = appData.city.find(item => (item.q + "_" + item.a) === randKey) || appData.tourist.find(item => (item.q + "_" + item.a) === randKey);
-        if (!q) { wrongList = wrongList.filter(k => k !== randKey); return nextQuestion(); }
-        document.getElementById('st-correct').innerText = "-"; document.getElementById('st-rate').innerText = "復習";
       } else {
-        const dataset = (currentMode === 'city') ? appData.city : appData.tourist;
-        const randIndex = Math.floor(Math.random() * dataset.length);
-        q = dataset[randIndex];
-        const s = appData.stats[currentMode];
-        document.getElementById('st-correct').innerText = s.correct + '/' + s.total; document.getElementById('st-rate').innerText = s.rate + '%';
+        document.getElementById('normal-answer-area').classList.remove('hidden'); document.getElementById('hidden-answer-area').classList.add('hidden');
+        document.getElementById('q-header').innerText = "この場所がある都道府県は？";
+        if (currentMode === 'review') {
+          if (!wrongList || wrongList.length === 0) { myAlert("復習完了！メニューに戻ります。"); return backToMenu(); }
+          const randKey = wrongList[Math.floor(Math.random() * wrongList.length)];
+          currentQuestion = appData.city.find(item => (item.q + "_" + item.a) === randKey) || appData.tourist.find(item => (item.q + "_" + item.a) === randKey);
+          if (!currentQuestion) { wrongList = wrongList.filter(k => k !== randKey); return nextQuestion(); }
+          document.getElementById('st-correct').innerText = "-"; document.getElementById('st-rate').innerText = "復習";
+        } else {
+          const dataset = (currentMode === 'city') ? appData.city : appData.tourist;
+          currentQuestion = dataset[Math.floor(Math.random() * dataset.length)];
+          const s = appData.stats[currentMode];
+          document.getElementById('st-correct').innerText = s.correct + '/' + s.total; document.getElementById('st-rate').innerText = s.rate + '%';
+        }
       }
-
-      currentQuestion = q;
       document.getElementById('answer-select').selectedIndex = 0;
       document.getElementById('q-text').innerText = currentQuestion.q;
       document.getElementById('q-img-container').innerHTML = currentQuestion.i ? `<img src="${currentQuestion.i}" class="quiz-img">` : '';
@@ -640,62 +602,39 @@
 
     function submitAnswer() {
       const v = document.getElementById('answer-select').value;
-      if(!v) return myAlert("都道府県を選択してください");
-      processAnswer(v);
+      if(!v) return myAlert("都道府県を選択してください"); processAnswer(v);
     }
     function giveUp() { processAnswer("GIVE_UP"); }
     function submitHiddenAnswer(index) { processAnswer(currentChoices[index]); }
 
     function processAnswer(ans) {
-      const isCorrect = (ans === currentQuestion.a);
-      let syncType = 'none';
-      let qKey = "";
-
-      if (currentMode === 'hidden') {
-      } else if (currentMode === 'review') {
+      const isCorrect = (ans === currentQuestion.a); let syncType = 'none'; let qKey = "";
+      if (currentMode !== 'hidden') {
         qKey = currentQuestion.q + "_" + currentQuestion.a;
-        if (isCorrect) { wrongList = wrongList.filter(k => k !== qKey); syncType = 'remove'; }
-      } else {
-        qKey = currentQuestion.q + "_" + currentQuestion.a;
-        updateLocalStats(isCorrect);
-        if (!isCorrect) { if (wrongList) { if (!wrongList.includes(qKey)) wrongList.push(qKey); } syncType = 'add'; }
+        if (currentMode === 'review') {
+          if (isCorrect) { wrongList = wrongList.filter(k => k !== qKey); syncType = 'remove'; }
+        } else {
+          const s = appData.stats[currentMode]; s.total++; if(isCorrect) s.correct++; s.rate = (s.total>0) ? ((s.correct/s.total)*100).toFixed(1) : "0.0";
+          const t = appData.stats.total; t.total++; if(isCorrect) t.correct++; t.rate = (t.total>0) ? ((t.correct/t.total)*100).toFixed(1) : "0.0";
+          if (!isCorrect) { if (wrongList && !wrongList.includes(qKey)) wrongList.push(qKey); syncType = 'add'; }
+        }
+        syncScore(isCorrect, syncType, qKey);
       }
-      
       showResult(isCorrect, currentQuestion.a);
-      if (currentMode !== 'hidden') syncScore(isCorrect, syncType, qKey);
-    }
-
-    function updateLocalStats(isCorrect) {
-      const s = appData.stats[currentMode]; s.total++; if(isCorrect) s.correct++;
-      s.rate = (s.total>0) ? ((s.correct/s.total)*100).toFixed(1) : "0.0";
-      const t = appData.stats.total; t.total++; if(isCorrect) t.correct++;
-      t.rate = (t.total>0) ? ((t.correct/t.total)*100).toFixed(1) : "0.0";
     }
 
     function showResult(isCorrect, ans) {
-      // ★正解・不正解でサウンドを鳴らす
-      if(isCorrect) playCorrectSound();
-      else playWrongSound();
-
+      if(isCorrect) playCorrectSound(); else playWrongSound();
       const overlay = document.getElementById('result-overlay');
-      const icon = document.getElementById('res-icon');
-      const text = document.getElementById('res-text');
       overlay.classList.remove('hidden');
-      if(isCorrect) { icon.innerText = '⭕'; text.innerText = '正解！'; text.style.color = '#28a745'; }
-      else { icon.innerText = '❌'; text.innerText = '残念...'; text.style.color = '#dc3545'; }
-      
+      document.getElementById('res-icon').innerText = isCorrect ? '⭕' : '❌';
+      document.getElementById('res-text').innerText = isCorrect ? '正解！' : '残念...';
+      document.getElementById('res-text').style.color = isCorrect ? '#28a745' : '#dc3545';
       document.getElementById('res-ans').innerText = ans;
 
       if (currentMode === 'hidden') {
         document.getElementById('link-container').classList.add('hidden');
-        if (currentQuestion.expImg) {
-          document.getElementById('exp-img-container').innerHTML = `
-            <div style="margin-top:10px;">
-              <img src="${currentQuestion.expImg}" onclick="openImageViewer('${currentQuestion.expImg}')" style="width:100%; max-height:280px; border-radius:8px; object-fit:contain; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor:pointer;">
-              <div style="font-size:11px; color:#888; margin-top:5px;">👆画像をタップすると拡大します</div>
-            </div>
-          `;
-        } else { document.getElementById('exp-img-container').innerHTML = ""; }
+        document.getElementById('exp-img-container').innerHTML = currentQuestion.expImg ? `<div style="margin-top:10px;"><img src="${currentQuestion.expImg}" onclick="openImageViewer('${currentQuestion.expImg}')" style="width:100%; max-height:280px; border-radius:8px; object-fit:contain; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor:pointer;"><div style="font-size:11px; color:#888; margin-top:5px;">👆画像をタップすると拡大します</div></div>` : "";
       } else {
         document.getElementById('link-container').classList.remove('hidden');
         document.getElementById('exp-img-container').innerHTML = ""; 

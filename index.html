@@ -78,7 +78,8 @@
     }
     input[type=range]:disabled::-webkit-slider-thumb { background: #888; }
 
-    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
+    /* ★修正：ローディング画面のz-indexを最強にして確実に前に出す！ */
+    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
     .spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-bottom: 20px; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -346,7 +347,6 @@
       const gain = audioCtx.createGain();
       osc.type = type;
       osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-      // ★修正：音量を前回の約3倍にブースト！
       const actualVol = (soundVol / 100) * volScale * 3.0;
       gain.gain.setValueAtTime(actualVol, audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
@@ -439,7 +439,6 @@
         document.getElementById('edit-name').value = localStorage.getItem('quiz_app_name') || "";
         document.getElementById('edit-pass').value = localStorage.getItem('quiz_app_pass') || "";
       }
-      // ★修正：管理者モードを開く時に必ずパスワード枠を空にする！
       if(id === 'admin-modal') {
         document.getElementById('admin-pass-input').value = "";
       }
@@ -450,50 +449,74 @@
     function closeNewsModal() { document.getElementById('news-modal').classList.add('hidden'); }
 
     function showStartupError(msg) {
-      hideLoading(); hideAll();
+      hideLoading();
+      hideAll();
       document.getElementById('startup-msg').innerHTML = msg;
       document.getElementById('startup-screen').classList.remove('hidden');
     }
 
     async function performGuestLogin() {
-      showLoading("準備中..."); hideAll();
+      showLoading("準備中...");
+      hideAll();
       try {
         const res = await fetch(`${GAS_API_URL}?action=guestLogin`).then(r => r.json());
-        if (res.error === "Invalid Action") return showStartupError("【開発者エラー】<br>GASの更新が正しく行われていません。新バージョンでデプロイしてください。");
+        if (res.error === "Invalid Action") {
+          return showStartupError("【開発者エラー】<br>GASの更新が正しく行われていません。新バージョンでデプロイしてください。");
+        }
         onDataLoaded(res);
-      } catch(e) { showStartupError("サーバーに接続できませんでした。"); }
+      } catch(e) { 
+        showStartupError("サーバーに接続できませんでした。"); 
+      }
     }
 
     function manualLogin() {
       const name = document.getElementById('manual-login-name').value;
       const pass = document.getElementById('manual-login-pass').value;
       if(!name || !pass) return myAlert("入力してください");
-      closeSubModal('login-modal'); showLoading("ログイン中..."); performLogin(name, pass, true);
+      closeSubModal('login-modal');
+      showLoading("ログイン中...");
+      performLogin(name, pass, true);
     }
     
     function retryManualLogin() {
       const name = document.getElementById('retry-login-name').value;
       const pass = document.getElementById('retry-login-pass').value;
       if(!name || !pass) return myAlert("入力してください");
-      showLoading("ログイン中..."); performLogin(name, pass, true);
+      showLoading("ログイン中...");
+      performLogin(name, pass, true);
     }
 
     async function performLogin(name, pass, isManual = false) {
       try {
         const url = `${GAS_API_URL}?action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`;
         const res = await fetch(url).then(r => r.json());
+        
         if (res.success) {
           if (isManual) {
-            localStorage.setItem('quiz_app_userid', res.userId); localStorage.setItem('quiz_app_name', res.name); localStorage.setItem('quiz_app_pass', res.pass);
+            localStorage.setItem('quiz_app_userid', res.userId);
+            localStorage.setItem('quiz_app_name', res.name);
+            localStorage.setItem('quiz_app_pass', res.pass);
             window.location.reload();
-          } else { onDataLoaded(res); }
+          } else {
+            onDataLoaded(res);
+          }
         } else {
-          if (isManual) { hideLoading(); myAlert(res.message); } 
-          else { localStorage.clear(); showStartupError("アカウントが見つかりません。"); }
+          if (isManual) {
+            hideLoading();
+            myAlert(res.message);
+          } else {
+            // ★自動ログイン失敗時：静かに裏でゲストとして再出発！エラー画面は出さない！
+            localStorage.clear();
+            performGuestLogin();
+          }
         }
       } catch(e) { 
-        if (isManual) { hideLoading(); myAlert("サーバーに接続できませんでした。"); } 
-        else { showStartupError("サーバーに接続できませんでした。"); }
+        if (isManual) {
+          hideLoading();
+          myAlert("サーバーに接続できませんでした。"); 
+        } else {
+          showStartupError("サーバーに接続できませんでした。");
+        }
       }
     }
 
@@ -519,18 +542,23 @@
       try {
         const res = await fetch(`${GAS_API_URL}?action=deleteAccount&userId=${myUserId}`).then(r => r.json());
         hideLoading();
-        if (res.success) { alert("アカウントを完全に削除しました。"); logout(); } 
-        else { myAlert(res.message); }
+        if (res.success) {
+          alert("アカウントを完全に削除しました。"); 
+          logout();
+        } else { myAlert(res.message); }
       } catch(e) { hideLoading(); myAlert("通信エラーが発生しました"); }
     }
 
     async function checkAdmin() {
       const pass = document.getElementById('admin-pass-input').value;
       if (!pass) return myAlert("キーを入力してください");
+      
+      // ★修正：クルクルを出すと同時にモーダルを隠して、被りを防止する！
+      document.getElementById('admin-modal').classList.add('hidden');
       showLoading("認証中...");
       try {
         const res = await fetch(`${GAS_API_URL}?action=checkAdmin&pass=${encodeURIComponent(pass)}`).then(r => r.json());
-        hideLoading(); document.getElementById('admin-modal').classList.add('hidden');
+        hideLoading(); 
         if (res.success) { appData.hidden = res.hiddenQuiz; startHiddenQuiz(); } 
         else { myAlert(res.message); }
       } catch(e) { hideLoading(); myAlert("通信エラーが発生しました。"); }
@@ -538,7 +566,10 @@
 
     function onDataLoaded(res) {
       hideLoading();
-      if (!res.success) return showStartupError(res.message || "エラーが発生しました");
+      
+      if (!res.success) {
+        return showStartupError(res.message || "エラーが発生しました");
+      }
 
       const currentVersion = localStorage.getItem('quiz_app_version') || 1.0;
       if (res.appVersion && parseFloat(res.appVersion) > parseFloat(currentVersion)) {
@@ -548,9 +579,13 @@
         return;
       }
       
-      localStorage.setItem('quiz_app_userid', res.userId); localStorage.setItem('quiz_app_name', res.name); localStorage.setItem('quiz_app_pass', res.pass);
+      localStorage.setItem('quiz_app_userid', res.userId);
+      localStorage.setItem('quiz_app_name', res.name);
+      localStorage.setItem('quiz_app_pass', res.pass);
+      
       myUserId = res.userId; appData.stats = res.stats; appData.city = res.masterData.city;
-      appData.tourist = res.masterData.tourist; appData.news = res.news || []; wrongList = null;
+      appData.tourist = res.masterData.tourist; appData.news = res.news || []; 
+      wrongList = null;
       document.getElementById('loading-overlay').classList.add('hidden');
       showMenu();
     }
@@ -566,7 +601,8 @@
           if(i < 3) topHtml += `<div class="news-item"><span class="news-date">${n.date}</span> ${n.msg}</div>`; 
           fullHtml += `<div class="news-item" style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;"><span class="news-date" style="display:block; margin-bottom:3px;">${n.date}</span> ${n.msg}</div>`;
         });
-        document.getElementById('news-list').innerHTML = topHtml; document.getElementById('full-news-list').innerHTML = fullHtml;
+        document.getElementById('news-list').innerHTML = topHtml;
+        document.getElementById('full-news-list').innerHTML = fullHtml;
       } else { document.getElementById('news-box').classList.add('hidden'); }
     }
 

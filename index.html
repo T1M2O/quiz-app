@@ -48,8 +48,10 @@
     .news-item { margin-bottom: 4px; color: #555; }
     .news-date { font-weight: bold; margin-right: 5px; color: #856404; }
 
-    .settings-icon { position: absolute; top: 15px; left: 15px; font-size: 24px; cursor: pointer; z-index: 100; transition: transform 0.3s; }
+    /* ★修正：右上に変更し、Zインデックスを上げて結果画面等でも常に押せるように調整 */
+    .settings-icon { position: absolute; top: 15px; right: 15px; font-size: 24px; cursor: pointer; z-index: 201; transition: transform 0.3s; }
     .settings-icon:active { transform: rotate(90deg); }
+    
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; justify-content: center; align-items: center; }
     .modal-content { background: white; width: 85%; max-width: 320px; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.2s ease-out; position: relative; max-height: 90vh; overflow-y: auto;}
     @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -59,7 +61,6 @@
     .settings-list li:last-child { border-bottom: none; }
     .settings-list li span.icon { margin-right: 10px; font-size: 20px; }
     
-    /* トグルスイッチ */
     .toggle-switch { position: relative; width: 50px; height: 26px; }
     .toggle-switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
@@ -67,7 +68,6 @@
     input:checked + .slider { background-color: #00B900; }
     input:checked + .slider:before { transform: translateX(24px); }
 
-    /* ★変更：音量スライダー（青色ゲージ対応） */
     input[type=range] {
       -webkit-appearance: none; width: 100%; height: 8px; border-radius: 4px;
       outline: none; padding: 0; border: none; background: #ccc; margin: 15px 0;
@@ -221,7 +221,7 @@
     <div class="modal-content">
       <h3 style="margin-top:0;">📢 お知らせ一覧</h3>
       <div id="full-news-list" style="max-height: 60vh; overflow-y:auto; text-align:left; font-size:13px;"></div>
-      <button class="btn" style="background:#6c757d; margin-top:15px;" onclick="closeSubModal('news-modal')">閉じる</button>
+      <button class="btn" style="background:#6c757d; margin-top:15px;" onclick="closeNewsModal()">閉じる</button>
     </div>
   </div>
 
@@ -229,9 +229,7 @@
     <h1 style="color:#00B900;">ジオゲ対策クイズ</h1>
     <p id="startup-msg" style="color:#dc3545; font-size:14px; margin-bottom:20px;">データ取得に失敗しました。<br>通信環境を確認して再試行してください。</p>
     <button class="btn btn-city" onclick="performGuestLogin()">🚀 ゲストとして再試行する</button>
-    
     <hr style="margin:25px 0; border:0; border-top:1px dashed #ccc;">
-    
     <p style="font-size:13px; margin-bottom:5px; color:#666;">▼ すでに本登録済みの方はこちら</p>
     <input type="text" id="retry-login-name" placeholder="ニックネーム">
     <input type="password" id="retry-login-pass" placeholder="パスワード">
@@ -243,31 +241,31 @@
     <div class="stats-bar" id="menu-stats" style="margin-top:30px;"></div>
     
     <div id="news-box" class="news-box hidden">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <div style="display:flex; justify-content:flex-start; align-items:center; gap: 10px; margin-bottom:10px;">
         <h3 style="margin:0;">📢 お知らせ</h3>
-        <button class="btn" style="padding:4px 8px; margin:0; width:auto; font-size:11px; background:#6c757d; border-radius:4px;" onclick="openSubModal('news-modal')">お知らせ一覧</button>
+        <button class="btn" style="padding:4px 8px; margin:0; width:auto; font-size:11px; background:#6c757d; border-radius:4px;" onclick="openNewsModal()">お知らせ一覧</button>
       </div>
       <div id="news-list"></div>
     </div>
 
     <button class="btn btn-city" onclick="startGame('city')">🏙 市町村クイズ</button>
     <button class="btn btn-tour" onclick="startGame('tourist')">⛩️ 観光地クイズ</button>
-    
     <button class="btn btn-dummy" style="margin-top:10px;" onclick="myAlert('難読地名クイズは追加予定です！')">🔒 追加予定モード①</button>
     <button class="btn btn-dummy" style="margin-top:10px;" onclick="myAlert('シルエットクイズは追加予定です！')">🔒 追加予定モード②</button>
-
     <button class="btn btn-review" style="margin-top:10px;" onclick="startReview()">🔥 復習モード</button>
     <button class="btn btn-stats" style="margin-top:10px;" onclick="showStatsDetail()">📊 統計データ</button>
   </div>
 
   <div id="stats-detail-screen" class="card hidden">
+    <div class="settings-icon" onclick="openSettings()">⚙️</div>
     <h2 style="margin-top:0;">📊 プレイデータ</h2>
     <div id="stats-content"></div>
     <button class="btn" onclick="backToMenu()">戻る</button>
   </div>
 
   <div id="game-screen" class="card hidden">
-    <div class="stats-bar" id="game-stats">
+    <div class="settings-icon" onclick="openSettings()">⚙️</div>
+    <div class="stats-bar" id="game-stats" style="margin-top:30px;">
       <div class="stats-item">正解数: <span id="st-correct">0</span></div>
       <div class="stats-item">正解率: <span id="st-rate">0%</span></div>
     </div>
@@ -356,18 +354,9 @@
       osc.start(); osc.stop(audioCtx.currentTime + duration);
     }
 
-    // ★変更：クイズ番組風の「ピン・ポーン」音
-    function playCorrectSound() { 
-      playTone(987, 'sine', 0.15, 0.4); 
-      setTimeout(() => playTone(784, 'sine', 0.4, 0.4), 150); 
-    }
-    // ★変更：クイズ番組風の「ブッブー」音（濁ったブザー音）
-    function playWrongSound() { 
-      playTone(150, 'square', 0.4, 0.15); 
-      playTone(156, 'square', 0.4, 0.15); 
-    }
+    function playCorrectSound() { playTone(987, 'sine', 0.15, 0.4); setTimeout(() => playTone(784, 'sine', 0.4, 0.4), 150); }
+    function playWrongSound() { playTone(150, 'square', 0.4, 0.15); playTone(156, 'square', 0.4, 0.15); }
 
-    // ★追加：スライダーの背景を青くする関数
     function updateSliderColor() {
       const slider = document.getElementById('sound-vol');
       if (!soundEnabled) {
@@ -447,6 +436,10 @@
       }
     }
     function closeSubModal(id) { document.getElementById(id).classList.add('hidden'); openSettings(); }
+    
+    // ★追加：お知らせ一覧専用の開閉処理
+    function openNewsModal() { document.getElementById('news-modal').classList.remove('hidden'); }
+    function closeNewsModal() { document.getElementById('news-modal').classList.add('hidden'); }
 
     function showStartupError(msg) {
       hideLoading();

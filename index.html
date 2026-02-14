@@ -208,7 +208,7 @@
     <div class="modal-content">
       <h3 style="margin-top:0;">🔑 管理者モード</h3>
       <p style="font-size:12px; color:#666;">アクセスキーを入力してください</p>
-      <input type="password" id="admin-pass-input" placeholder="パスワードを入力" style="margin-bottom:20px;">
+      <input type="text" id="admin-pass-input" placeholder="パスワードを入力" style="margin-bottom:20px; -webkit-text-security: disc;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       <div style="display:flex; gap:10px;">
         <button class="btn" style="background:#6c757d; flex:1; margin:0;" onclick="closeSubModal('admin-modal')">戻る</button>
         <button class="btn" style="background:#007bff; flex:1; margin:0;" onclick="checkAdmin()">送信</button>
@@ -346,7 +346,8 @@
       const gain = audioCtx.createGain();
       osc.type = type;
       osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-      const actualVol = (soundVol / 100) * volScale;
+      // ★修正：音量を前回の約3倍にブースト！
+      const actualVol = (soundVol / 100) * volScale * 3.0;
       gain.gain.setValueAtTime(actualVol, audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
       osc.connect(gain); gain.connect(audioCtx.destination);
@@ -399,12 +400,9 @@
     // =====================================
 
     window.onload = function() {
-      // ★超重要：強力すぎるキャッシュの元凶（Service Worker）を完全に削除する
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister();
-          }
+          for(let registration of registrations) { registration.unregister(); }
         });
       }
 
@@ -441,6 +439,10 @@
         document.getElementById('edit-name').value = localStorage.getItem('quiz_app_name') || "";
         document.getElementById('edit-pass').value = localStorage.getItem('quiz_app_pass') || "";
       }
+      // ★修正：管理者モードを開く時に必ずパスワード枠を空にする！
+      if(id === 'admin-modal') {
+        document.getElementById('admin-pass-input').value = "";
+      }
     }
     function closeSubModal(id) { document.getElementById(id).classList.add('hidden'); openSettings(); }
     
@@ -448,73 +450,50 @@
     function closeNewsModal() { document.getElementById('news-modal').classList.add('hidden'); }
 
     function showStartupError(msg) {
-      hideLoading();
-      hideAll();
+      hideLoading(); hideAll();
       document.getElementById('startup-msg').innerHTML = msg;
       document.getElementById('startup-screen').classList.remove('hidden');
     }
 
     async function performGuestLogin() {
-      showLoading("準備中...");
-      hideAll();
+      showLoading("準備中..."); hideAll();
       try {
         const res = await fetch(`${GAS_API_URL}?action=guestLogin`).then(r => r.json());
-        if (res.error === "Invalid Action") {
-          return showStartupError("【開発者エラー】<br>GASの更新が正しく行われていません。新バージョンでデプロイしてください。");
-        }
+        if (res.error === "Invalid Action") return showStartupError("【開発者エラー】<br>GASの更新が正しく行われていません。新バージョンでデプロイしてください。");
         onDataLoaded(res);
-      } catch(e) { 
-        showStartupError("サーバーに接続できませんでした。"); 
-      }
+      } catch(e) { showStartupError("サーバーに接続できませんでした。"); }
     }
 
     function manualLogin() {
       const name = document.getElementById('manual-login-name').value;
       const pass = document.getElementById('manual-login-pass').value;
       if(!name || !pass) return myAlert("入力してください");
-      closeSubModal('login-modal');
-      showLoading("ログイン中...");
-      performLogin(name, pass, true);
+      closeSubModal('login-modal'); showLoading("ログイン中..."); performLogin(name, pass, true);
     }
     
     function retryManualLogin() {
       const name = document.getElementById('retry-login-name').value;
       const pass = document.getElementById('retry-login-pass').value;
       if(!name || !pass) return myAlert("入力してください");
-      showLoading("ログイン中...");
-      performLogin(name, pass, true);
+      showLoading("ログイン中..."); performLogin(name, pass, true);
     }
 
     async function performLogin(name, pass, isManual = false) {
       try {
         const url = `${GAS_API_URL}?action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`;
         const res = await fetch(url).then(r => r.json());
-        
         if (res.success) {
           if (isManual) {
-            localStorage.setItem('quiz_app_userid', res.userId);
-            localStorage.setItem('quiz_app_name', res.name);
-            localStorage.setItem('quiz_app_pass', res.pass);
+            localStorage.setItem('quiz_app_userid', res.userId); localStorage.setItem('quiz_app_name', res.name); localStorage.setItem('quiz_app_pass', res.pass);
             window.location.reload();
-          } else {
-            onDataLoaded(res);
-          }
+          } else { onDataLoaded(res); }
         } else {
-          if (isManual) {
-            hideLoading();
-            myAlert(res.message);
-          } else {
-            localStorage.clear();
-            showStartupError("アカウントが見つかりません。");
-          }
+          if (isManual) { hideLoading(); myAlert(res.message); } 
+          else { localStorage.clear(); showStartupError("アカウントが見つかりません。"); }
         }
       } catch(e) { 
-        if (isManual) {
-          hideLoading();
-          myAlert("サーバーに接続できませんでした。"); 
-        } else {
-          showStartupError("サーバーに接続できませんでした。");
-        }
+        if (isManual) { hideLoading(); myAlert("サーバーに接続できませんでした。"); } 
+        else { showStartupError("サーバーに接続できませんでした。"); }
       }
     }
 
@@ -540,10 +519,8 @@
       try {
         const res = await fetch(`${GAS_API_URL}?action=deleteAccount&userId=${myUserId}`).then(r => r.json());
         hideLoading();
-        if (res.success) {
-          alert("アカウントを完全に削除しました。"); 
-          logout();
-        } else { myAlert(res.message); }
+        if (res.success) { alert("アカウントを完全に削除しました。"); logout(); } 
+        else { myAlert(res.message); }
       } catch(e) { hideLoading(); myAlert("通信エラーが発生しました"); }
     }
 
@@ -561,10 +538,7 @@
 
     function onDataLoaded(res) {
       hideLoading();
-      
-      if (!res.success) {
-        return showStartupError(res.message || "エラーが発生しました");
-      }
+      if (!res.success) return showStartupError(res.message || "エラーが発生しました");
 
       const currentVersion = localStorage.getItem('quiz_app_version') || 1.0;
       if (res.appVersion && parseFloat(res.appVersion) > parseFloat(currentVersion)) {
@@ -574,13 +548,9 @@
         return;
       }
       
-      localStorage.setItem('quiz_app_userid', res.userId);
-      localStorage.setItem('quiz_app_name', res.name);
-      localStorage.setItem('quiz_app_pass', res.pass);
-      
+      localStorage.setItem('quiz_app_userid', res.userId); localStorage.setItem('quiz_app_name', res.name); localStorage.setItem('quiz_app_pass', res.pass);
       myUserId = res.userId; appData.stats = res.stats; appData.city = res.masterData.city;
-      appData.tourist = res.masterData.tourist; appData.news = res.news || []; 
-      wrongList = null;
+      appData.tourist = res.masterData.tourist; appData.news = res.news || []; wrongList = null;
       document.getElementById('loading-overlay').classList.add('hidden');
       showMenu();
     }
@@ -596,8 +566,7 @@
           if(i < 3) topHtml += `<div class="news-item"><span class="news-date">${n.date}</span> ${n.msg}</div>`; 
           fullHtml += `<div class="news-item" style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;"><span class="news-date" style="display:block; margin-bottom:3px;">${n.date}</span> ${n.msg}</div>`;
         });
-        document.getElementById('news-list').innerHTML = topHtml;
-        document.getElementById('full-news-list').innerHTML = fullHtml;
+        document.getElementById('news-list').innerHTML = topHtml; document.getElementById('full-news-list').innerHTML = fullHtml;
       } else { document.getElementById('news-box').classList.add('hidden'); }
     }
 

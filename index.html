@@ -272,6 +272,8 @@
     <button class="btn btn-dummy" style="margin-top:10px;" onclick="myAlert('シルエットクイズは追加予定です！')">🔒 追加予定モード②</button>
     <button class="btn btn-review" style="margin-top:10px;" onclick="startReview()">🔥 復習モード</button>
     <button class="btn btn-stats" style="margin-top:10px;" onclick="showStatsDetail()">📊 統計データ</button>
+    
+    <div style="text-align:center; margin-top:25px; font-size:11px; color:#aaa;">Ver <span id="app-version-display"></span></div>
   </div>
 
   <div id="stats-detail-screen" class="card hidden">
@@ -332,7 +334,7 @@
   </div>
 
   <script>
-    const HTML_VERSION = "2.4"; 
+    const HTML_VERSION = "2.5"; 
     
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); });
@@ -355,7 +357,6 @@
 
     const prefectures = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
 
-    // サウンド機能
     let audioCtx;
     let soundEnabled = (localStorage.getItem('quiz_app_sound') !== 'false');
     let soundVol = parseInt(localStorage.getItem('quiz_app_vol')) || 50;
@@ -426,6 +427,9 @@
     }
 
     window.onload = function() {
+      // ★メニュー下部にバージョンを表示
+      document.getElementById('app-version-display').innerText = HTML_VERSION;
+
       const select = document.getElementById('answer-select');
       prefectures.forEach(pref => {
         const option = document.createElement('option'); option.value = pref; option.textContent = pref; select.appendChild(option);
@@ -494,7 +498,6 @@
       document.getElementById('startup-screen').classList.remove('hidden');
     }
 
-    // ★追加：通信前にキャッシュの有無を判定して送信URLを最適化する関数
     function getFetchUrl(baseQuery) {
       let url = `${GAS_API_URL}?${baseQuery}`;
       const localMaster = localStorage.getItem('quiz_app_masterdata');
@@ -602,7 +605,6 @@
         setTimeout(() => { window.location.reload(); }, 2000); return;
       }
       
-      // ★追加：マスターデータが送られてきたらスマホにキャッシュさせる
       if (res.masterData) {
         appData.city = res.masterData.city;
         appData.tourist = res.masterData.tourist;

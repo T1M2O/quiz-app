@@ -37,6 +37,10 @@
     
     .quiz-header { font-size: 14px; color: #666; margin-bottom: 5px; }
     .quiz-text { font-size: 24px; font-weight: bold; margin: 15px 0; min-height: 1.2em; line-height: 1.4; white-space: pre-wrap; }
+    /* ★ルビ（ふりがな）のスタイル調整 */
+    ruby { ruby-align: center; }
+    rt { font-size: 10px; color: #666; font-weight: normal; }
+    
     .quiz-img { max-height: 200px; width: auto; max-width: 100%; border-radius: 8px; object-fit: contain; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     
     .result-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.98); border-radius: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; overflow-y: auto; padding: 20px 0;}
@@ -44,7 +48,7 @@
     .res-text { font-size: 32px; font-weight: bold; margin-bottom: 20px; }
     .correct-box { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 20px; width: 80%; }
     
-    .news-box { text-align: left; background: #fff3cd; border: 1px solid #ffeeba; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; max-height: 150px; overflow-y: hidden; }
+    .news-box { text-align: left; background: #fff3cd; border: 1px solid #ffeeba; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; }
     .news-item { margin-bottom: 4px; color: #555; }
     .news-date { font-weight: bold; margin-right: 5px; color: #856404; }
 
@@ -82,13 +86,21 @@
     .help-section { text-align: left; margin-bottom: 15px; font-size: 14px; color: #444; border-bottom: 1px dashed #eee; padding-bottom: 10px; }
     .help-section h4 { margin: 0 0 5px 0; color: #007bff; }
     
-    /* チュートリアル用タブ */
     .tab-container { display: flex; margin-bottom: 15px; border-bottom: 2px solid #eee; }
     .tab { flex: 1; padding: 10px; font-weight: bold; color: #888; cursor: pointer; }
     .tab.active { color: #007bff; border-bottom: 2px solid #007bff; margin-bottom: -2px; }
   </style>
 </head>
 <body>
+
+  <div id="iframe-modal" class="modal-overlay hidden" style="z-index: 100002; flex-direction: column;">
+    <div style="width:100%; background:#fff; display:flex; justify-content:space-between; padding:10px; box-sizing:border-box;">
+      <button class="btn" style="width:auto; margin:0; padding:8px 15px; background:#6c757d;" onclick="closeIframe()">閉じる</button>
+      <div style="font-size:12px; color:#666; align-self:center;">※見れない場合は右へ👉</div>
+      <button class="btn" style="width:auto; margin:0; padding:8px 15px; background:#007bff;" id="iframe-ext-btn">別タブで開く</button>
+    </div>
+    <iframe id="inapp-browser" style="width:100%; flex:1; border:none; background:#fff;"></iframe>
+  </div>
 
   <div id="image-viewer" class="modal-overlay hidden" style="z-index: 100000; background: rgba(0,0,0,0.95); flex-direction: column;" onclick="closeImageViewer()">
     <div style="width: 100%; text-align: right; padding: 20px; box-sizing: border-box;"><span style="color: white; font-size: 30px; cursor: pointer; font-weight: bold;">✖</span></div>
@@ -312,8 +324,8 @@
       </div>
       
       <div id="link-container" style="display:flex; gap:10px; width:90%; margin-bottom: 20px;">
-        <a id="link-map" target="_blank" class="btn" style="background:#4285F4; flex:1; margin:0; padding:10px 0; font-size:14px;">🗺️ GoogleMap</a>
-        <a id="link-wiki" target="_blank" class="btn" style="background:#333; flex:1; margin:0; padding:10px 0; font-size:14px;">📖 Wikipedia</a>
+        <a id="link-map" class="btn" style="background:#4285F4; flex:1; margin:0; padding:10px 0; font-size:14px;">🗺️ GoogleMap</a>
+        <a id="link-wiki" class="btn" style="background:#333; flex:1; margin:0; padding:10px 0; font-size:14px;">📖 Wikipedia</a>
       </div>
 
       <button class="btn btn-next" style="width:90%;" onclick="nextQuestion()">次の問題へ ➡</button>
@@ -321,14 +333,12 @@
   </div>
 
   <script>
-    const HTML_VERSION = "2.0"; 
+    const HTML_VERSION = "2.1"; 
     
-    // PWA用のService Worker登録
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); });
     }
 
-    // キャッシュ爆破自己修復
     const savedHtmlVersion = localStorage.getItem('quiz_html_version');
     if (savedHtmlVersion !== HTML_VERSION) {
       if ('caches' in window) { caches.keys().then(names => { names.forEach(name => caches.delete(name)); }); }
@@ -357,7 +367,7 @@
     document.addEventListener('click', initAudio, { once: true });
 
     document.addEventListener('click', function(e) {
-      if (e.target.closest('.btn') || e.target.closest('.settings-list li') || e.target.closest('.settings-icon')) {
+      if (e.target.closest('.btn') || e.target.closest('.settings-list li') || e.target.closest('.settings-icon') || e.target.closest('.news-item')) {
         playTone(600, 'sine', 0.05, 0.3);
       }
     });
@@ -424,14 +434,12 @@
       document.getElementById('sound-vol').value = soundVol;
       updateVolUI();
 
-      // ★UUIDを廃止し、名前とパスワードで管理
       const storedName = localStorage.getItem('quiz_app_name');
       const storedPass = localStorage.getItem('quiz_app_pass');
       
       if (storedName && storedPass) {
         performLogin(storedName, storedPass);
       } else {
-        // 未登録の場合は背後にメニューを置きつつ、手前に認証モーダルを出す
         document.getElementById('menu-screen').classList.remove('hidden');
         document.getElementById('loading-overlay').classList.add('hidden');
         document.getElementById('auth-modal').classList.remove('hidden');
@@ -440,15 +448,11 @@
 
     function switchAuthTab(tab) {
       if(tab === 'register') {
-        document.getElementById('tab-register').classList.add('active');
-        document.getElementById('tab-login').classList.remove('active');
-        document.getElementById('area-register').classList.remove('hidden');
-        document.getElementById('area-login').classList.add('hidden');
+        document.getElementById('tab-register').classList.add('active'); document.getElementById('tab-login').classList.remove('active');
+        document.getElementById('area-register').classList.remove('hidden'); document.getElementById('area-login').classList.add('hidden');
       } else {
-        document.getElementById('tab-login').classList.add('active');
-        document.getElementById('tab-register').classList.remove('active');
-        document.getElementById('area-login').classList.remove('hidden');
-        document.getElementById('area-register').classList.add('hidden');
+        document.getElementById('tab-login').classList.add('active'); document.getElementById('tab-register').classList.remove('active');
+        document.getElementById('area-login').classList.remove('hidden'); document.getElementById('area-register').classList.add('hidden');
       }
     }
 
@@ -456,6 +460,17 @@
     function closeAlert() { document.getElementById('custom-alert').classList.add('hidden'); }
     function openImageViewer(src) { document.getElementById('viewer-img').src = src; document.getElementById('image-viewer').classList.remove('hidden'); }
     function closeImageViewer() { document.getElementById('image-viewer').classList.add('hidden'); document.getElementById('viewer-img').src = ""; }
+    
+    // ★追加：インアプリブラウザ関連
+    function openIframe(url) {
+      document.getElementById('inapp-browser').src = url;
+      document.getElementById('iframe-ext-btn').onclick = () => window.open(url, '_blank');
+      document.getElementById('iframe-modal').classList.remove('hidden');
+    }
+    function closeIframe() {
+      document.getElementById('iframe-modal').classList.add('hidden');
+      document.getElementById('inapp-browser').src = "";
+    }
 
     function openSettings() { document.getElementById('settings-modal').classList.remove('hidden'); }
     function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
@@ -471,10 +486,7 @@
     function openNewsModal() { document.getElementById('news-modal').classList.remove('hidden'); }
     function closeNewsModal() { document.getElementById('news-modal').classList.add('hidden'); }
 
-    function clearLoginData() {
-      localStorage.removeItem('quiz_app_name');
-      localStorage.removeItem('quiz_app_pass');
-    }
+    function clearLoginData() { localStorage.removeItem('quiz_app_name'); localStorage.removeItem('quiz_app_pass'); }
 
     function showStartupError(msg) {
       hideLoading(); hideAll();
@@ -489,10 +501,8 @@
       showLoading("アカウント作成中...");
       try {
         const res = await fetch(`${GAS_API_URL}?action=register&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`).then(r => r.json());
-        if(res.success) {
-          document.getElementById('auth-modal').classList.add('hidden');
-          onDataLoaded(res);
-        } else { hideLoading(); myAlert(res.message); }
+        if(res.success) { document.getElementById('auth-modal').classList.add('hidden'); onDataLoaded(res); } 
+        else { hideLoading(); myAlert(res.message); }
       } catch(e) { hideLoading(); myAlert("通信エラーが発生しました"); }
     }
 
@@ -503,10 +513,8 @@
       showLoading("ログイン中...");
       try {
         const res = await fetch(`${GAS_API_URL}?action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`).then(r => r.json());
-        if(res.success) {
-          document.getElementById('auth-modal').classList.add('hidden');
-          onDataLoaded(res);
-        } else { hideLoading(); myAlert(res.message); }
+        if(res.success) { document.getElementById('auth-modal').classList.add('hidden'); onDataLoaded(res); } 
+        else { hideLoading(); myAlert(res.message); }
       } catch(e) { hideLoading(); myAlert("通信エラーが発生しました"); }
     }
 
@@ -550,9 +558,7 @@
     async function checkAdmin() {
       const pass = document.getElementById('admin-pass-input').value;
       if (!pass) return myAlert("キーを入力してください");
-      
-      document.getElementById('admin-modal').classList.add('hidden');
-      showLoading("認証中...");
+      document.getElementById('admin-modal').classList.add('hidden'); showLoading("認証中...");
       try {
         const res = await fetch(`${GAS_API_URL}?action=checkAdmin&pass=${encodeURIComponent(pass)}`).then(r => r.json());
         hideLoading(); 
@@ -565,22 +571,19 @@
       hideLoading();
       if (!res.success) return showStartupError(res.message || "エラーが発生しました");
 
-      localStorage.setItem('quiz_app_name', res.name);
-      localStorage.setItem('quiz_app_pass', res.pass);
+      localStorage.setItem('quiz_app_name', res.name); localStorage.setItem('quiz_app_pass', res.pass);
 
       const currentVersion = localStorage.getItem('quiz_app_version') || "1.0";
       if (res.appVersion && parseFloat(res.appVersion) > parseFloat(currentVersion)) {
         localStorage.setItem('quiz_app_version', res.appVersion); 
         myAlert("🚀 アプリの新しいバージョンが見つかりました！最新版に更新します。");
-        setTimeout(() => { window.location.reload(); }, 2000);
-        return;
+        setTimeout(() => { window.location.reload(); }, 2000); return;
       }
       
       appData.stats = res.stats; appData.city = res.masterData.city;
       appData.tourist = res.masterData.tourist; appData.news = res.news || []; 
       wrongList = null;
-      document.getElementById('loading-overlay').classList.add('hidden');
-      showMenu();
+      document.getElementById('loading-overlay').classList.add('hidden'); showMenu();
     }
 
     function showMenu() {
@@ -591,11 +594,14 @@
         document.getElementById('news-box').classList.remove('hidden');
         let topHtml = ''; let fullHtml = '';
         appData.news.forEach((n, i) => { 
-          if(i < 3) topHtml += `<div class="news-item"><span class="news-date">${n.date}</span> ${n.msg}</div>`; 
-          fullHtml += `<div class="news-item" style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;"><span class="news-date" style="display:block; margin-bottom:3px;">${n.date}</span> ${n.msg}</div>`;
+          // ★お知らせの展開アコーディオンUI
+          let detHtml = n.details ? `<div id="news-det-top-${i}" class="hidden" style="margin-top:8px; padding-top:8px; border-top:1px dashed #ccc; color:#444; line-height:1.4;">${n.details.replace(/\n/g, '<br>')}</div>` : '';
+          let detHtmlModal = n.details ? `<div id="news-det-mod-${i}" class="hidden" style="margin-top:8px; padding-top:8px; border-top:1px dashed #ccc; color:#444; line-height:1.4;">${n.details.replace(/\n/g, '<br>')}</div>` : '';
+          
+          if(i < 3) topHtml += `<div class="news-item" style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px; cursor:pointer;" onclick="document.getElementById('news-det-top-${i}').classList.toggle('hidden')"><span class="news-date" style="display:block; margin-bottom:3px;">${n.date}</span><span style="font-weight:bold; color:#007bff;">${n.title}</span>${detHtml}</div>`; 
+          fullHtml += `<div class="news-item" style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px; cursor:pointer;" onclick="document.getElementById('news-det-mod-${i}').classList.toggle('hidden')"><span class="news-date" style="display:block; margin-bottom:3px;">${n.date}</span><span style="font-weight:bold; color:#007bff;">${n.title}</span>${detHtmlModal}</div>`;
         });
-        document.getElementById('news-list').innerHTML = topHtml;
-        document.getElementById('full-news-list').innerHTML = fullHtml;
+        document.getElementById('news-list').innerHTML = topHtml; document.getElementById('full-news-list').innerHTML = fullHtml;
       } else { document.getElementById('news-box').classList.add('hidden'); }
     }
 
@@ -652,11 +658,7 @@
     }
     
     function backToMenu() { showMenu(); }
-    
-    function logout() { 
-      clearLoginData();
-      location.reload(); 
-    }
+    function logout() { clearLoginData(); location.reload(); }
 
     function nextQuestion() {
       document.getElementById('result-overlay').classList.add('hidden');
@@ -665,8 +667,7 @@
         document.getElementById('q-header').innerText = "㊙️ 隠しクイズ ㊙️"; document.getElementById('st-correct').innerText = "㊙️"; document.getElementById('st-rate').innerText = "隠れ";
         if (hiddenQueue.length === 0) {
           document.getElementById('q-text').innerText = "すべての隠しクイズをクリアしました！🎉\nもう問題はありません。";
-          document.getElementById('q-img-container').innerHTML = ""; document.getElementById('hidden-answer-area').classList.add('hidden'); 
-          return;
+          document.getElementById('q-img-container').innerHTML = ""; document.getElementById('hidden-answer-area').classList.add('hidden'); return;
         }
         currentQuestion = hiddenQueue.pop();
         currentChoices = [currentQuestion.a, currentQuestion.w1, currentQuestion.w2, currentQuestion.w3].sort(() => Math.random() - 0.5); 
@@ -688,7 +689,12 @@
         }
       }
       document.getElementById('answer-select').selectedIndex = 0;
-      document.getElementById('q-text').innerText = currentQuestion.q;
+      
+      // ★ルビ（ふりがな）の表示処理
+      let qHtml = currentQuestion.q;
+      if (currentQuestion.q_kana) qHtml = `<ruby>${currentQuestion.q}<rt>${currentQuestion.q_kana}</rt></ruby>`;
+      document.getElementById('q-text').innerHTML = qHtml;
+      
       document.getElementById('q-img-container').innerHTML = currentQuestion.i ? `<img src="${currentQuestion.i}" class="quiz-img">` : '';
     }
 
@@ -700,9 +706,25 @@
     function submitHiddenAnswer(index) { processAnswer(currentChoices[index]); }
 
     function processAnswer(ans) {
-      const isCorrect = (ans === currentQuestion.a); let syncType = 'none'; let qKey = "";
+      // ★修正：同名市町村（伊達市など）で、どの都道府県を選んでも正解にする処理
+      let validAnswers = [];
+      let isCorrect = false;
+      let qKey = "";
+
+      if (currentMode === 'city' || (currentMode === 'review' && currentQuestion.mode === 'city')) {
+        const matchingRows = appData.city.filter(item => item.q === currentQuestion.q);
+        validAnswers = matchingRows.map(item => item.a);
+        isCorrect = validAnswers.includes(ans);
+      } else if (currentMode !== 'hidden') {
+        validAnswers = [currentQuestion.a];
+        isCorrect = (ans === currentQuestion.a);
+      } else {
+        isCorrect = (ans === currentQuestion.a);
+      }
+
+      let syncType = 'none';
       if (currentMode !== 'hidden') {
-        qKey = currentQuestion.q + "_" + currentQuestion.a;
+        qKey = currentQuestion.q + "_" + currentQuestion.a; // 代表として今の問題のAを使う
         if (currentMode === 'review') {
           if (isCorrect) { wrongList = wrongList.filter(k => k !== qKey); syncType = 'remove'; }
         } else {
@@ -712,17 +734,26 @@
         }
         syncScore(isCorrect, syncType, qKey);
       }
-      showResult(isCorrect, currentQuestion.a);
+      showResult(isCorrect, ans, validAnswers);
     }
 
-    function showResult(isCorrect, ans) {
+    function showResult(isCorrect, ans, validAnswers) {
       if(isCorrect) playCorrectSound(); else playWrongSound();
       const overlay = document.getElementById('result-overlay');
       overlay.classList.remove('hidden');
       document.getElementById('res-icon').innerText = isCorrect ? '⭕' : '❌';
       document.getElementById('res-text').innerText = isCorrect ? '正解！' : '残念...';
       document.getElementById('res-text').style.color = isCorrect ? '#28a745' : '#dc3545';
-      document.getElementById('res-ans').innerText = ans;
+
+      // ★ルビ付きで正解の都道府県を表示（伊達市などは 〇〇 / △△ と複数表示）
+      let correctDisplayHtml = "";
+      if (currentMode === 'city' || (currentMode === 'review' && currentQuestion.mode === 'city')) {
+        const matchingRows = appData.city.filter(item => item.q === currentQuestion.q);
+        correctDisplayHtml = matchingRows.map(item => item.a_kana ? `<ruby>${item.a}<rt>${item.a_kana}</rt></ruby>` : item.a).join(' / ');
+      } else {
+        correctDisplayHtml = currentQuestion.a;
+      }
+      document.getElementById('res-ans').innerHTML = correctDisplayHtml;
 
       if (currentMode === 'hidden') {
         document.getElementById('link-container').classList.add('hidden');
@@ -730,9 +761,19 @@
       } else {
         document.getElementById('link-container').classList.remove('hidden');
         document.getElementById('exp-img-container').innerHTML = ""; 
-        const searchQuery = currentQuestion.a + " " + currentQuestion.n; 
-        document.getElementById('link-map').href = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(searchQuery);
-        document.getElementById('link-wiki').href = "https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.n);
+        
+        // ★マップとWikiのURL設定
+        let mapUrl, wikiUrl;
+        if (currentMode === 'city' || (currentMode === 'review' && currentQuestion.mode === 'city')) {
+          mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(currentQuestion.a + " " + currentQuestion.q);
+          wikiUrl = currentQuestion.wiki || ("https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.q));
+        } else {
+          mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(currentQuestion.a + " " + currentQuestion.n);
+          wikiUrl = "https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.n);
+        }
+        
+        document.getElementById('link-map').onclick = () => openIframe(mapUrl);
+        document.getElementById('link-wiki').onclick = () => openIframe(wikiUrl);
       }
     }
   </script>

@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja" translate="no">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
+  <meta name="google" content="notranslate">
   <title>ジオゲ対策クイズ</title>
   
   <link rel="manifest" href="manifest.json">
@@ -210,6 +211,7 @@
       <button class="btn" style="background:#6c757d; margin-top:15px;" onclick="closeSubModal('news-modal')">閉じる</button>
     </div>
   </div>
+
   <div id="menu-screen" class="card hidden">
     <div class="settings-icon" onclick="openSettings()">⚙️</div>
     <div class="stats-bar" id="menu-stats" style="margin-top:30px;"></div>
@@ -374,12 +376,9 @@
       const storedName = localStorage.getItem('quiz_app_name');
       const storedPass = localStorage.getItem('quiz_app_pass');
       
-      // ★起動時の振り分け（ログイン画面は廃止）
       if (storedId && storedName && storedPass) {
-        // 自動ログイン
         performLogin(storedName, storedPass, false);
       } else {
-        // 初見はゲスト作成へ
         performGuestLogin();
       }
     };
@@ -400,12 +399,15 @@
     }
     function closeSubModal(id) { document.getElementById(id).classList.add('hidden'); openSettings(); }
 
-    // --- 各種APIリクエスト ---
+    // --- 通信処理のエラーハンドリングを強化 ---
     async function performGuestLogin() {
       try {
         const res = await fetch(`${GAS_API_URL}?action=guestLogin`).then(r => r.json());
         onDataLoaded(res);
-      } catch(e) { myAlert("通信エラーが発生しました。"); }
+      } catch(e) { 
+        hideLoading(); 
+        myAlert("初期設定に失敗しました。通信環境の良いところでリロードしてください。"); 
+      }
     }
 
     function manualLogin() {
@@ -416,11 +418,9 @@
       performLogin(name, pass, true);
     }
 
-    // ★自動ログイン失敗時にループしないよう修正
     async function performLogin(name, pass, isManual = false) {
       try {
-        const url = `${GAS_API_URL}?action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`;
-        const res = await fetch(url).then(r => r.json());
+        const res = await fetch(`${GAS_API_URL}?action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`).then(r => r.json());
         
         if (res.success) {
           if (isManual) {
@@ -432,22 +432,22 @@
             onDataLoaded(res);
           }
         } else {
-          // ログイン失敗時
           if (isManual) {
             hideLoading();
             myAlert(res.message);
           } else {
-            // 自動ログインに失敗した場合は、ローカルデータを消してゲストとして再出発
-            localStorage.removeItem('quiz_app_userid');
-            localStorage.removeItem('quiz_app_name');
-            localStorage.removeItem('quiz_app_pass');
+            // ★自動ログイン失敗時：ローカルデータを破棄してゲストとして再出発
+            localStorage.clear();
             performGuestLogin();
           }
         }
       } catch(e) { 
         hideLoading(); 
-        if (isManual) myAlert("通信エラーが発生しました。"); 
-        else myAlert("サーバーに接続できません。通信環境を確認してください。"); 
+        if (isManual) myAlert("サーバーに接続できませんでした。"); 
+        else {
+          localStorage.clear();
+          performGuestLogin();
+        }
       }
     }
 
@@ -495,6 +495,11 @@
     function onDataLoaded(res) {
       hideLoading();
       
+      if (!res.success) {
+        myAlert(res.message || "エラーが発生しました");
+        return;
+      }
+
       const currentVersion = localStorage.getItem('quiz_app_version') || 1.0;
       if (res.appVersion && parseFloat(res.appVersion) > parseFloat(currentVersion)) {
         localStorage.setItem('quiz_app_version', res.appVersion); 

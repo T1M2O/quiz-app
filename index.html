@@ -206,7 +206,7 @@
     let currentQuestion = null;
     let wrongList = null; 
     let currentChoices = []; 
-    let hiddenQueue = []; // ★追加：隠しクイズの出題待ちリスト
+    let hiddenQueue = []; 
 
     const prefectures = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
 
@@ -344,14 +344,13 @@
       currentMode = 'hidden';
       document.getElementById('review-banner').classList.add('hidden');
       
-      // ★追加：隠しクイズの出題リストを作成し、シャッフルする
       hiddenQueue = [...appData.hidden];
       hiddenQueue.sort(() => Math.random() - 0.5);
 
       nextQuestion();
       hideAll(); 
       document.getElementById('game-screen').classList.remove('hidden'); 
-      document.getElementById('result-overlay').classList.add('hidden');
+      // result-overlay は nextQuestion 側で隠すのでここは安全のため
     }
 
     async function syncScore(isCorrect, syncType, wrongId) {
@@ -385,13 +384,16 @@
       if (!dataset || dataset.length === 0) return myAlert("データがありません");
       document.getElementById('review-banner').classList.add('hidden');
       nextQuestion();
-      hideAll(); document.getElementById('game-screen').classList.remove('hidden'); document.getElementById('result-overlay').classList.add('hidden');
+      hideAll(); document.getElementById('game-screen').classList.remove('hidden');
     }
     
     function backToMenu() { showMenu(); }
     function logout() { localStorage.removeItem('quiz_app_userid'); localStorage.removeItem('quiz_app_name'); localStorage.removeItem('quiz_app_pass'); location.reload(); }
 
     function nextQuestion() {
+      // ★ 最重要修正箇所：必ず最初に結果画面を隠す
+      document.getElementById('result-overlay').classList.add('hidden');
+      
       let q = null;
       
       // UIの切り替え
@@ -408,15 +410,13 @@
       }
 
       if (currentMode === 'hidden') {
-        // ★変更：キュー（出題リスト）が空になったら終了表示
         if (hiddenQueue.length === 0) {
           document.getElementById('q-text').innerText = "すべての隠しクイズをクリアしました！🎉\nもう問題はありません。";
           document.getElementById('q-img-container').innerHTML = "";
-          document.getElementById('hidden-answer-area').classList.add('hidden'); // 選択肢ボタンを消す
+          document.getElementById('hidden-answer-area').classList.add('hidden'); 
           return;
         }
 
-        // キューから1問取り出す
         q = hiddenQueue.pop();
         
         currentChoices = [q.a, q.w1, q.w2, q.w3];
@@ -440,7 +440,6 @@
       }
 
       currentQuestion = q;
-      document.getElementById('result-overlay').classList.add('hidden');
       document.getElementById('answer-select').selectedIndex = 0;
       document.getElementById('q-text').innerText = currentQuestion.q;
       document.getElementById('q-img-container').innerHTML = currentQuestion.i ? `<img src="${currentQuestion.i}" class="quiz-img">` : '';
@@ -500,11 +499,9 @@
       
       document.getElementById('res-ans').innerText = ans;
 
-      // ★追加・変更：Wiki/Mapリンク と 解説画像の制御
       if (currentMode === 'hidden') {
         document.getElementById('link-container').classList.add('hidden');
         
-        // F列の解説画像URLがあれば表示
         if (currentQuestion.expImg) {
           document.getElementById('exp-img-container').innerHTML = `<img src="${currentQuestion.expImg}" style="max-width:100%; max-height:150px; border-radius:8px; object-fit:contain;">`;
         } else {
@@ -513,7 +510,7 @@
         
       } else {
         document.getElementById('link-container').classList.remove('hidden');
-        document.getElementById('exp-img-container').innerHTML = ""; // 通常モードでは解説画像を消す
+        document.getElementById('exp-img-container').innerHTML = ""; 
         const searchQuery = currentQuestion.a + " " + currentQuestion.n; 
         document.getElementById('link-map').href = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(searchQuery);
         document.getElementById('link-wiki').href = "https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.n);

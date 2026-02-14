@@ -37,7 +37,6 @@
     
     .quiz-header { font-size: 14px; color: #666; margin-bottom: 5px; }
     .quiz-text { font-size: 24px; font-weight: bold; margin: 15px 0; min-height: 1.2em; line-height: 1.4; white-space: pre-wrap; }
-    /* ★ルビ（ふりがな）のスタイル調整 */
     ruby { ruby-align: center; }
     rt { font-size: 10px; color: #666; font-weight: normal; }
     
@@ -324,8 +323,8 @@
       </div>
       
       <div id="link-container" style="display:flex; gap:10px; width:90%; margin-bottom: 20px;">
-        <a id="link-map" class="btn" style="background:#4285F4; flex:1; margin:0; padding:10px 0; font-size:14px;">🗺️ GoogleMap</a>
-        <a id="link-wiki" class="btn" style="background:#333; flex:1; margin:0; padding:10px 0; font-size:14px;">📖 Wikipedia</a>
+        <a id="link-map" class="btn" style="background:#4285F4; flex:1; margin:0; padding:10px 0; font-size:14px; line-height:1.2;">🗺️ GoogleMap<br><span style="font-size:10px;">(別タブで開く)</span></a>
+        <a id="link-wiki" class="btn" style="background:#333; flex:1; margin:0; padding:10px 0; font-size:14px; line-height:1.2;">📖 Wikipedia<br><span style="font-size:10px;">(アプリ内で開く)</span></a>
       </div>
 
       <button class="btn btn-next" style="width:90%;" onclick="nextQuestion()">次の問題へ ➡</button>
@@ -333,7 +332,7 @@
   </div>
 
   <script>
-    const HTML_VERSION = "2.1"; 
+    const HTML_VERSION = "2.3"; 
     
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); });
@@ -461,7 +460,6 @@
     function openImageViewer(src) { document.getElementById('viewer-img').src = src; document.getElementById('image-viewer').classList.remove('hidden'); }
     function closeImageViewer() { document.getElementById('image-viewer').classList.add('hidden'); document.getElementById('viewer-img').src = ""; }
     
-    // ★追加：インアプリブラウザ関連
     function openIframe(url) {
       document.getElementById('inapp-browser').src = url;
       document.getElementById('iframe-ext-btn').onclick = () => window.open(url, '_blank');
@@ -588,13 +586,18 @@
 
     function showMenu() {
       hideAll(); document.getElementById('menu-screen').classList.remove('hidden');
-      if(appData.stats) document.getElementById('menu-stats').innerHTML = `<div class="stats-item">正解数: <span>${appData.stats.total.correct}</span></div><div class="stats-item">正解率: <span>${appData.stats.total.rate}%</span></div>`;
+      
+      // ★修正：データが空っぽでもクラッシュしないように安全策を追加
+      if (!appData.stats || !appData.stats.total) {
+        appData.stats = { total: {correct:0, total:0, rate:0}, city: {correct:0, total:0, rate:0}, tourist: {correct:0, total:0, rate:0} };
+      }
+      
+      document.getElementById('menu-stats').innerHTML = `<div class="stats-item">正解数: <span>${appData.stats.total.correct}</span></div><div class="stats-item">正解率: <span>${appData.stats.total.rate}%</span></div>`;
       
       if (appData.news && appData.news.length > 0) {
         document.getElementById('news-box').classList.remove('hidden');
         let topHtml = ''; let fullHtml = '';
         appData.news.forEach((n, i) => { 
-          // ★お知らせの展開アコーディオンUI
           let detHtml = n.details ? `<div id="news-det-top-${i}" class="hidden" style="margin-top:8px; padding-top:8px; border-top:1px dashed #ccc; color:#444; line-height:1.4;">${n.details.replace(/\n/g, '<br>')}</div>` : '';
           let detHtmlModal = n.details ? `<div id="news-det-mod-${i}" class="hidden" style="margin-top:8px; padding-top:8px; border-top:1px dashed #ccc; color:#444; line-height:1.4;">${n.details.replace(/\n/g, '<br>')}</div>` : '';
           
@@ -626,12 +629,13 @@
       nextQuestion(); hideAll(); document.getElementById('game-screen').classList.remove('hidden'); 
     }
 
+    // ★修正：通信形式の統一と、成功時のみ更新するように修正
     async function syncScore(isCorrect, syncType, wrongId) {
       if (currentMode === 'hidden') return; 
       try {
         const name = localStorage.getItem('quiz_app_name');
         const res = await fetch(`${GAS_API_URL}?action=sync&name=${encodeURIComponent(name)}&mode=${currentMode}&isCorrect=${isCorrect}&syncType=${syncType}&wrongId=${encodeURIComponent(wrongId)}`).then(r => r.json());
-        if(res) appData.stats = res;
+        if(res && res.success) appData.stats = res.stats;
       } catch(e) {}
     }
     
@@ -640,6 +644,10 @@
     function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
     
     function showStatsDetail() {
+      // ★修正：統計データが空っぽでもクラッシュしないように安全策を追加
+      if (!appData.stats || !appData.stats.total) {
+        appData.stats = { total: {correct:0, total:0, rate:0}, city: {correct:0, total:0, rate:0}, tourist: {correct:0, total:0, rate:0} };
+      }
       hideAll(); document.getElementById('stats-detail-screen').classList.remove('hidden');
       document.getElementById('stats-content').innerHTML = `${createStatsCard("総合データ", appData.stats.total, "#007bff")}${createStatsCard("🏙 市町村クイズ", appData.stats.city, "#28a745")}${createStatsCard("⛩️ 観光地クイズ", appData.stats.tourist, "#e67e22")}`;
     }
@@ -684,13 +692,17 @@
         } else {
           const dataset = (currentMode === 'city') ? appData.city : appData.tourist;
           currentQuestion = dataset[Math.floor(Math.random() * dataset.length)];
+          
+          // ★修正：初期データがなくてもクラッシュしない
+          if (!appData.stats || !appData.stats[currentMode]) {
+             appData.stats = { total: {correct:0, total:0, rate:0}, city: {correct:0, total:0, rate:0}, tourist: {correct:0, total:0, rate:0} };
+          }
           const s = appData.stats[currentMode];
           document.getElementById('st-correct').innerText = s.correct + '/' + s.total; document.getElementById('st-rate').innerText = s.rate + '%';
         }
       }
       document.getElementById('answer-select').selectedIndex = 0;
       
-      // ★ルビ（ふりがな）の表示処理
       let qHtml = currentQuestion.q;
       if (currentQuestion.q_kana) qHtml = `<ruby>${currentQuestion.q}<rt>${currentQuestion.q_kana}</rt></ruby>`;
       document.getElementById('q-text').innerHTML = qHtml;
@@ -706,7 +718,6 @@
     function submitHiddenAnswer(index) { processAnswer(currentChoices[index]); }
 
     function processAnswer(ans) {
-      // ★修正：同名市町村（伊達市など）で、どの都道府県を選んでも正解にする処理
       let validAnswers = [];
       let isCorrect = false;
       let qKey = "";
@@ -724,12 +735,19 @@
 
       let syncType = 'none';
       if (currentMode !== 'hidden') {
-        qKey = currentQuestion.q + "_" + currentQuestion.a; // 代表として今の問題のAを使う
+        qKey = currentQuestion.q + "_" + currentQuestion.a; 
         if (currentMode === 'review') {
           if (isCorrect) { wrongList = wrongList.filter(k => k !== qKey); syncType = 'remove'; }
         } else {
-          const s = appData.stats[currentMode]; s.total++; if(isCorrect) s.correct++; s.rate = (s.total>0) ? ((s.correct/s.total)*100).toFixed(1) : "0.0";
-          const t = appData.stats.total; t.total++; if(isCorrect) t.correct++; t.rate = (t.total>0) ? ((t.correct/t.total)*100).toFixed(1) : "0.0";
+          // ★修正：ローカルスコアの更新時にも安全策を適用し、正しく数値を保持する
+          const s = appData.stats[currentMode]; 
+          s.total++; if(isCorrect) s.correct++; 
+          s.rate = (s.total > 0) ? ((s.correct / s.total) * 100).toFixed(1) : 0;
+          
+          const t = appData.stats.total; 
+          t.total++; if(isCorrect) t.correct++; 
+          t.rate = (t.total > 0) ? ((t.correct / t.total) * 100).toFixed(1) : 0;
+          
           if (!isCorrect) { if (wrongList && !wrongList.includes(qKey)) wrongList.push(qKey); syncType = 'add'; }
         }
         syncScore(isCorrect, syncType, qKey);
@@ -745,13 +763,12 @@
       document.getElementById('res-text').innerText = isCorrect ? '正解！' : '残念...';
       document.getElementById('res-text').style.color = isCorrect ? '#28a745' : '#dc3545';
 
-      // ★ルビ付きで正解の都道府県を表示（伊達市などは 〇〇 / △△ と複数表示）
       let correctDisplayHtml = "";
       if (currentMode === 'city' || (currentMode === 'review' && currentQuestion.mode === 'city')) {
         const matchingRows = appData.city.filter(item => item.q === currentQuestion.q);
         correctDisplayHtml = matchingRows.map(item => item.a_kana ? `<ruby>${item.a}<rt>${item.a_kana}</rt></ruby>` : item.a).join(' / ');
       } else {
-        correctDisplayHtml = currentQuestion.a;
+        correctDisplayHtml = currentQuestion.q_kana ? `<ruby>${currentQuestion.a}<rt>${currentQuestion.q_kana}</rt></ruby>` : currentQuestion.a;
       }
       document.getElementById('res-ans').innerHTML = correctDisplayHtml;
 
@@ -762,17 +779,16 @@
         document.getElementById('link-container').classList.remove('hidden');
         document.getElementById('exp-img-container').innerHTML = ""; 
         
-        // ★マップとWikiのURL設定
         let mapUrl, wikiUrl;
         if (currentMode === 'city' || (currentMode === 'review' && currentQuestion.mode === 'city')) {
           mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(currentQuestion.a + " " + currentQuestion.q);
           wikiUrl = currentQuestion.wiki || ("https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.q));
         } else {
-          mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(currentQuestion.a + " " + currentQuestion.n);
-          wikiUrl = "https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.n);
+          mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(currentQuestion.a + " " + currentQuestion.q);
+          wikiUrl = "https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.q);
         }
         
-        document.getElementById('link-map').onclick = () => openIframe(mapUrl);
+        document.getElementById('link-map').onclick = () => window.open(mapUrl, '_blank');
         document.getElementById('link-wiki').onclick = () => openIframe(wikiUrl);
       }
     }

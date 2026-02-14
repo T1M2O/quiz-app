@@ -332,7 +332,7 @@
   </div>
 
   <script>
-    const HTML_VERSION = "2.3"; 
+    const HTML_VERSION = "2.4"; 
     
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); });
@@ -342,6 +342,8 @@
     if (savedHtmlVersion !== HTML_VERSION) {
       if ('caches' in window) { caches.keys().then(names => { names.forEach(name => caches.delete(name)); }); }
       localStorage.setItem('quiz_html_version', HTML_VERSION);
+      localStorage.removeItem('quiz_app_masterdata'); 
+      localStorage.removeItem('quiz_app_master_ver');
       window.location.reload(true);
     }
 
@@ -492,13 +494,30 @@
       document.getElementById('startup-screen').classList.remove('hidden');
     }
 
+    // ★追加：通信前にキャッシュの有無を判定して送信URLを最適化する関数
+    function getFetchUrl(baseQuery) {
+      let url = `${GAS_API_URL}?${baseQuery}`;
+      const localMaster = localStorage.getItem('quiz_app_masterdata');
+      const localMasterVer = localStorage.getItem('quiz_app_master_ver');
+      if (localMaster && localMasterVer === HTML_VERSION) {
+        url += "&needMaster=false";
+        const parsed = JSON.parse(localMaster);
+        appData.city = parsed.city;
+        appData.tourist = parsed.tourist;
+      } else {
+        url += "&needMaster=true";
+      }
+      return url;
+    }
+
     async function registerAccount() {
       const name = document.getElementById('reg-name').value;
       const pass = document.getElementById('reg-pass').value;
       if(!name || !pass) return myAlert("ニックネームとパスワードを入力してください");
       showLoading("アカウント作成中...");
       try {
-        const res = await fetch(`${GAS_API_URL}?action=register&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`).then(r => r.json());
+        const url = getFetchUrl(`action=register&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`);
+        const res = await fetch(url).then(r => r.json());
         if(res.success) { document.getElementById('auth-modal').classList.add('hidden'); onDataLoaded(res); } 
         else { hideLoading(); myAlert(res.message); }
       } catch(e) { hideLoading(); myAlert("通信エラーが発生しました"); }
@@ -510,7 +529,8 @@
       if(!name || !pass) return myAlert("入力してください");
       showLoading("ログイン中...");
       try {
-        const res = await fetch(`${GAS_API_URL}?action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`).then(r => r.json());
+        const url = getFetchUrl(`action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`);
+        const res = await fetch(url).then(r => r.json());
         if(res.success) { document.getElementById('auth-modal').classList.add('hidden'); onDataLoaded(res); } 
         else { hideLoading(); myAlert(res.message); }
       } catch(e) { hideLoading(); myAlert("通信エラーが発生しました"); }
@@ -518,7 +538,8 @@
 
     async function performLogin(name, pass) {
       try {
-        const res = await fetch(`${GAS_API_URL}?action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`).then(r => r.json());
+        const url = getFetchUrl(`action=login&name=${encodeURIComponent(name)}&pass=${encodeURIComponent(pass)}`);
+        const res = await fetch(url).then(r => r.json());
         if (res.success) { onDataLoaded(res); } 
         else { clearLoginData(); showStartupError("アカウントが見つからないか、情報が変更されています。"); }
       } catch(e) { showStartupError("サーバーに接続できませんでした。"); }
@@ -569,17 +590,28 @@
       hideLoading();
       if (!res.success) return showStartupError(res.message || "エラーが発生しました");
 
-      localStorage.setItem('quiz_app_name', res.name); localStorage.setItem('quiz_app_pass', res.pass);
+      localStorage.setItem('quiz_app_name', res.name); 
+      localStorage.setItem('quiz_app_pass', res.pass);
 
       const currentVersion = localStorage.getItem('quiz_app_version') || "1.0";
       if (res.appVersion && parseFloat(res.appVersion) > parseFloat(currentVersion)) {
         localStorage.setItem('quiz_app_version', res.appVersion); 
+        localStorage.removeItem('quiz_app_masterdata');
+        localStorage.removeItem('quiz_app_master_ver');
         myAlert("🚀 アプリの新しいバージョンが見つかりました！最新版に更新します。");
         setTimeout(() => { window.location.reload(); }, 2000); return;
       }
       
-      appData.stats = res.stats; appData.city = res.masterData.city;
-      appData.tourist = res.masterData.tourist; appData.news = res.news || []; 
+      // ★追加：マスターデータが送られてきたらスマホにキャッシュさせる
+      if (res.masterData) {
+        appData.city = res.masterData.city;
+        appData.tourist = res.masterData.tourist;
+        localStorage.setItem('quiz_app_masterdata', JSON.stringify(res.masterData));
+        localStorage.setItem('quiz_app_master_ver', HTML_VERSION);
+      }
+      
+      appData.stats = res.stats; 
+      appData.news = res.news || []; 
       wrongList = null;
       document.getElementById('loading-overlay').classList.add('hidden'); showMenu();
     }
@@ -587,7 +619,6 @@
     function showMenu() {
       hideAll(); document.getElementById('menu-screen').classList.remove('hidden');
       
-      // ★修正：データが空っぽでもクラッシュしないように安全策を追加
       if (!appData.stats || !appData.stats.total) {
         appData.stats = { total: {correct:0, total:0, rate:0}, city: {correct:0, total:0, rate:0}, tourist: {correct:0, total:0, rate:0} };
       }
@@ -629,7 +660,6 @@
       nextQuestion(); hideAll(); document.getElementById('game-screen').classList.remove('hidden'); 
     }
 
-    // ★修正：通信形式の統一と、成功時のみ更新するように修正
     async function syncScore(isCorrect, syncType, wrongId) {
       if (currentMode === 'hidden') return; 
       try {
@@ -644,7 +674,6 @@
     function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
     
     function showStatsDetail() {
-      // ★修正：統計データが空っぽでもクラッシュしないように安全策を追加
       if (!appData.stats || !appData.stats.total) {
         appData.stats = { total: {correct:0, total:0, rate:0}, city: {correct:0, total:0, rate:0}, tourist: {correct:0, total:0, rate:0} };
       }
@@ -693,7 +722,6 @@
           const dataset = (currentMode === 'city') ? appData.city : appData.tourist;
           currentQuestion = dataset[Math.floor(Math.random() * dataset.length)];
           
-          // ★修正：初期データがなくてもクラッシュしない
           if (!appData.stats || !appData.stats[currentMode]) {
              appData.stats = { total: {correct:0, total:0, rate:0}, city: {correct:0, total:0, rate:0}, tourist: {correct:0, total:0, rate:0} };
           }
@@ -739,7 +767,6 @@
         if (currentMode === 'review') {
           if (isCorrect) { wrongList = wrongList.filter(k => k !== qKey); syncType = 'remove'; }
         } else {
-          // ★修正：ローカルスコアの更新時にも安全策を適用し、正しく数値を保持する
           const s = appData.stats[currentMode]; 
           s.total++; if(isCorrect) s.correct++; 
           s.rate = (s.total > 0) ? ((s.correct / s.total) * 100).toFixed(1) : 0;

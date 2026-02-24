@@ -336,7 +336,7 @@
   </div>
 
   <script>
-    const HTML_VERSION = "2.7.3"; 
+    const HTML_VERSION = "2.7.4"; 
     
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); });
@@ -726,7 +726,6 @@
       return `<div class="stats-card" style="border-left-color: ${color}"><h3>${title}</h3><div class="stats-row"><span>回答数</span><span class="stats-val">${obj.total} 問</span></div><div class="stats-row"><span>正解数</span><span class="stats-val">${obj.correct} 問</span></div><div class="progress-bg"><div class="progress-bar" style="width:${rateVal}%; background:${color};"></div></div><div style="text-align:right; font-size:12px; margin-top:2px;">正解率: ${obj.rate}%</div></div>`;
     }
 
-    // ★修正：データが無い時に無限ループしないように、メニューに戻す処理を追加！
     function startGame(mode) {
       sessionStorage.setItem('activeScreen', 'game'); 
       sessionStorage.setItem('activeMode', mode);     
@@ -738,7 +737,7 @@
       else if(mode === 'station') dataset = appData.station;
 
       if (!dataset || dataset.length === 0) {
-        sessionStorage.setItem('activeScreen', 'menu'); // ★ここが重要
+        sessionStorage.setItem('activeScreen', 'menu'); 
         return myAlert("データがありません。設定から「全データ再取得」を試してください。");
       }
       document.getElementById('review-banner').classList.add('hidden');
@@ -846,6 +845,7 @@
       showResult(isCorrect, ans, validAnswers);
     }
 
+    // ★修正：Google MapのリンクURLフォーマットを完全修正
     function showResult(isCorrect, ans, validAnswers) {
       if(isCorrect) playCorrectSound(); else playWrongSound();
       const overlay = document.getElementById('result-overlay');
@@ -871,11 +871,13 @@
         document.getElementById('exp-img-container').innerHTML = ""; 
         
         let mapUrl, wikiUrl;
+        
+        // ★修正：検索・座標パラメータを公式の正しい形式に直しました
         if (currentMode === 'city' || (currentMode === 'review' && currentQuestion.mode === 'city')) {
           mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(currentQuestion.a + " " + currentQuestion.q);
           wikiUrl = currentQuestion.wiki || ("https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.q));
         } else if (currentMode === 'station' || (currentMode === 'review' && currentQuestion.mode === 'station')) {
-          mapUrl = `http://googleusercontent.com/maps.google.com/5{currentQuestion.lat},${currentQuestion.lng}`;
+          mapUrl = "https://www.google.com/maps/search/?api=1&query=" + currentQuestion.lat + "," + currentQuestion.lng;
           wikiUrl = "https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.q);
         } else {
           mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(currentQuestion.a + " " + currentQuestion.q);

@@ -336,7 +336,7 @@
   </div>
 
   <script>
-    const HTML_VERSION = "2.7.2"; 
+    const HTML_VERSION = "2.7.3"; 
     
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); });
@@ -499,12 +499,12 @@
       document.getElementById('startup-screen').classList.remove('hidden');
     }
 
-    // ★追加：強制的にデータを再取得する関数
     function forceRefreshData() {
       closeSettings();
       if(confirm("スマホ内のクイズデータを一度すべて消去し、サーバーから最新のデータをダウンロードし直します。\nよろしいですか？（成績は消えません）")) {
         localStorage.removeItem('quiz_app_masterdata'); 
         localStorage.removeItem('quiz_app_master_ver');
+        sessionStorage.removeItem('activeScreen'); // 画面状態もリセット
         window.location.reload(true);
       }
     }
@@ -613,6 +613,7 @@
         localStorage.setItem('quiz_app_version', res.appVersion); 
         localStorage.removeItem('quiz_app_masterdata');
         localStorage.removeItem('quiz_app_master_ver');
+        sessionStorage.removeItem('activeScreen');
         myAlert("🚀 アプリの新しいバージョンが見つかりました！最新版に更新します。");
         setTimeout(() => { window.location.reload(); }, 2000); return;
       }
@@ -725,6 +726,7 @@
       return `<div class="stats-card" style="border-left-color: ${color}"><h3>${title}</h3><div class="stats-row"><span>回答数</span><span class="stats-val">${obj.total} 問</span></div><div class="stats-row"><span>正解数</span><span class="stats-val">${obj.correct} 問</span></div><div class="progress-bg"><div class="progress-bar" style="width:${rateVal}%; background:${color};"></div></div><div style="text-align:right; font-size:12px; margin-top:2px;">正解率: ${obj.rate}%</div></div>`;
     }
 
+    // ★修正：データが無い時に無限ループしないように、メニューに戻す処理を追加！
     function startGame(mode) {
       sessionStorage.setItem('activeScreen', 'game'); 
       sessionStorage.setItem('activeMode', mode);     
@@ -735,7 +737,10 @@
       else if(mode === 'tourist') dataset = appData.tourist;
       else if(mode === 'station') dataset = appData.station;
 
-      if (!dataset || dataset.length === 0) return myAlert("データがありません。設定から再読み込みしてください。");
+      if (!dataset || dataset.length === 0) {
+        sessionStorage.setItem('activeScreen', 'menu'); // ★ここが重要
+        return myAlert("データがありません。設定から「全データ再取得」を試してください。");
+      }
       document.getElementById('review-banner').classList.add('hidden');
       nextQuestion(); hideAll(); document.getElementById('game-screen').classList.remove('hidden');
     }
@@ -870,7 +875,7 @@
           mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(currentQuestion.a + " " + currentQuestion.q);
           wikiUrl = currentQuestion.wiki || ("https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.q));
         } else if (currentMode === 'station' || (currentMode === 'review' && currentQuestion.mode === 'station')) {
-          mapUrl = `http://googleusercontent.com/maps.google.com/4{currentQuestion.lat},${currentQuestion.lng}`;
+          mapUrl = `http://googleusercontent.com/maps.google.com/5{currentQuestion.lat},${currentQuestion.lng}`;
           wikiUrl = "https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.q);
         } else {
           mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(currentQuestion.a + " " + currentQuestion.q);

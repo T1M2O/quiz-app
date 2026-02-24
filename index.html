@@ -25,7 +25,7 @@
     .btn:active { transform: scale(0.98); }
     .btn-city { background: #00B900; }
     .btn-tour { background: #E67E22; }
-    .btn-station { background: #17a2b8; } /* ★駅クイズ用カラー */
+    .btn-station { background: #17a2b8; } 
     .btn-review { background: #dc3545; }
     .btn-stats { background: #6f42c1; }
     .btn-giveup { background: #6c757d; margin-top: 5px; }
@@ -335,7 +335,7 @@
   </div>
 
   <script>
-    const HTML_VERSION = "2.7"; 
+    const HTML_VERSION = "2.7.1"; 
     
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); });
@@ -507,7 +507,7 @@
         const parsed = JSON.parse(localMaster);
         appData.city = parsed.city;
         appData.tourist = parsed.tourist;
-        appData.station = parsed.station || []; // ★追加
+        appData.station = parsed.station || []; 
       } else {
         url += "&needMaster=true";
       }
@@ -609,7 +609,7 @@
       if (res.masterData) {
         appData.city = res.masterData.city;
         appData.tourist = res.masterData.tourist;
-        appData.station = res.masterData.station || []; // ★追加
+        appData.station = res.masterData.station || []; 
         localStorage.setItem('quiz_app_masterdata', JSON.stringify(res.masterData));
         localStorage.setItem('quiz_app_master_ver', HTML_VERSION);
       }
@@ -705,7 +705,6 @@
         appData.stats = { total: {correct:0, total:0, rate:0}, city: {correct:0, total:0, rate:0}, tourist: {correct:0, total:0, rate:0}, station: {correct:0, total:0, rate:0} };
       }
       hideAll(); document.getElementById('stats-detail-screen').classList.remove('hidden');
-      // ★追加：統計画面に鉄道駅クイズを追加
       document.getElementById('stats-content').innerHTML = `${createStatsCard("総合データ", appData.stats.total, "#007bff")}${createStatsCard("🏙 市町村クイズ", appData.stats.city, "#28a745")}${createStatsCard("⛩️ 観光地クイズ", appData.stats.tourist, "#e67e22")}${createStatsCard("🚉 鉄道駅クイズ", appData.stats.station, "#17a2b8")}`;
     }
 
@@ -723,7 +722,7 @@
       let dataset;
       if(mode === 'city') dataset = appData.city;
       else if(mode === 'tourist') dataset = appData.tourist;
-      else if(mode === 'station') dataset = appData.station; // ★追加
+      else if(mode === 'station') dataset = appData.station;
 
       if (!dataset || dataset.length === 0) return myAlert("データがありません。設定から再読み込みしてください。");
       document.getElementById('review-banner').classList.add('hidden');
@@ -752,7 +751,6 @@
         if (currentMode === 'review') {
           if (!wrongList || wrongList.length === 0) { myAlert("復習完了！メニューに戻ります。"); return backToMenu(); }
           const randKey = wrongList[Math.floor(Math.random() * wrongList.length)];
-          // ★修正：stationデータからも検索
           currentQuestion = appData.city.find(item => (item.q + "_" + item.a) === randKey) || appData.tourist.find(item => (item.q + "_" + item.a) === randKey) || appData.station.find(item => (item.q + "_" + item.a) === randKey);
           
           if (!currentQuestion) { wrongList = wrongList.filter(k => k !== randKey); return nextQuestion(); }
@@ -774,13 +772,11 @@
       }
       document.getElementById('answer-select').selectedIndex = 0;
       
-      // ★追加：鉄道駅用の特別な表示
+      // ★修正：会社名を消し、路線名と駅名だけをストイックに表示する仕様に変更！
       if (currentMode === 'station' || (currentMode === 'review' && currentQuestion.mode === 'station')) {
         document.getElementById('q-text').innerHTML = `
-          <div style="font-size:32px; color:#17a2b8; margin-bottom:5px;">${currentQuestion.q}</div>
-          <div style="font-size:14px; color:#666; font-weight:normal; background:#e9ecef; padding:5px; border-radius:5px; display:inline-block;">
-            🏢 ${currentQuestion.company}<br>🛤️ ${currentQuestion.line}
-          </div>
+          <div style="font-size:14px; color:#666; background:#e9ecef; padding:4px 10px; border-radius:15px; display:inline-block; margin-bottom:10px;">🛤️ ${currentQuestion.line}</div>
+          <div style="font-size:34px; color:#17a2b8; font-weight:bold; margin-bottom:5px;">${currentQuestion.q}</div>
         `;
       } else {
         let qHtml = currentQuestion.q;
@@ -864,8 +860,7 @@
           mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(currentQuestion.a + " " + currentQuestion.q);
           wikiUrl = currentQuestion.wiki || ("https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.q));
         } else if (currentMode === 'station' || (currentMode === 'review' && currentQuestion.mode === 'station')) {
-          // ★追加：鉄道駅用のURL（緯度経度からGoogleMapを開く）
-          mapUrl = `https://www.google.com/maps/search/?api=1&query=${currentQuestion.lat},${currentQuestion.lng}`;
+          mapUrl = `https://www.google.com/maps/search/?api=1&query=$${currentQuestion.lat},${currentQuestion.lng}`;
           wikiUrl = "https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.q);
         } else {
           mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(currentQuestion.a + " " + currentQuestion.q);

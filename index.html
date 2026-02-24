@@ -334,7 +334,7 @@
   </div>
 
   <script>
-    const HTML_VERSION = "2.6"; 
+    const HTML_VERSION = "2.6.1"; 
     
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); });
@@ -614,10 +614,29 @@
       appData.stats = res.stats; 
       appData.news = res.news || []; 
       wrongList = null;
-      document.getElementById('loading-overlay').classList.add('hidden'); showMenu();
+      document.getElementById('loading-overlay').classList.add('hidden'); 
+      
+      // ★追加：リロード時に元の画面に復帰する処理
+      const activeScreen = sessionStorage.getItem('activeScreen') || 'menu';
+      const activeMode = sessionStorage.getItem('activeMode');
+
+      if (activeScreen === 'game' && activeMode) {
+        if (activeMode === 'review') {
+          startReview();
+        } else if (activeMode === 'hidden') {
+          showMenu(); // セキュリティのため隠しクイズはメニューへ戻す
+        } else {
+          startGame(activeMode);
+        }
+      } else if (activeScreen === 'stats') {
+        showStatsDetail();
+      } else {
+        showMenu();
+      }
     }
 
     function showMenu() {
+      sessionStorage.setItem('activeScreen', 'menu'); // ★追加
       hideAll(); document.getElementById('menu-screen').classList.remove('hidden');
       
       if (!appData.stats || !appData.stats.total) {
@@ -641,6 +660,8 @@
     }
 
     async function startReview() {
+      sessionStorage.setItem('activeScreen', 'game'); // ★追加
+      sessionStorage.setItem('activeMode', 'review'); // ★追加
       if (wrongList === null) {
         showLoading("復習データを取得中...");
         try {
@@ -656,6 +677,8 @@
     }
 
     function startHiddenQuiz() {
+      sessionStorage.setItem('activeScreen', 'game'); // ★追加
+      sessionStorage.setItem('activeMode', 'hidden'); // ★追加
       currentMode = 'hidden'; document.getElementById('review-banner').classList.add('hidden');
       hiddenQueue = [...appData.hidden]; hiddenQueue.sort(() => Math.random() - 0.5);
       nextQuestion(); hideAll(); document.getElementById('game-screen').classList.remove('hidden'); 
@@ -675,6 +698,7 @@
     function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
     
     function showStatsDetail() {
+      sessionStorage.setItem('activeScreen', 'stats'); // ★追加
       if (!appData.stats || !appData.stats.total) {
         appData.stats = { total: {correct:0, total:0, rate:0}, city: {correct:0, total:0, rate:0}, tourist: {correct:0, total:0, rate:0} };
       }
@@ -688,6 +712,8 @@
     }
 
     function startGame(mode) {
+      sessionStorage.setItem('activeScreen', 'game'); // ★追加
+      sessionStorage.setItem('activeMode', mode);     // ★追加
       currentMode = mode;
       const dataset = (mode === 'city') ? appData.city : appData.tourist;
       if (!dataset || dataset.length === 0) return myAlert("データがありません");

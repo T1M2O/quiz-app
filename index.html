@@ -157,6 +157,7 @@
       <ul class="settings-list">
         <li onclick="openSubModal('sound-modal')"><span class="icon">🎵</span> サウンド設定</li>
         <li onclick="openSubModal('account-modal')"><span class="icon">👤</span> アカウント情報変更</li>
+        <li onclick="forceRefreshData()" style="color:#007bff;"><span class="icon">🔄</span> 全データ再取得 (不具合時)</li>
         <li onclick="openSubModal('admin-modal')"><span class="icon">🔑</span> 管理者モード</li>
         <li onclick="openSubModal('help-modal')"><span class="icon">📖</span> 使い方説明</li>
         <li onclick="logout()" style="color:#dc3545;"><span class="icon">🚪</span> ログアウト</li>
@@ -335,7 +336,7 @@
   </div>
 
   <script>
-    const HTML_VERSION = "2.7.1"; 
+    const HTML_VERSION = "2.7.2"; 
     
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); });
@@ -496,6 +497,16 @@
       hideLoading(); hideAll();
       document.getElementById('startup-msg').innerHTML = msg;
       document.getElementById('startup-screen').classList.remove('hidden');
+    }
+
+    // ★追加：強制的にデータを再取得する関数
+    function forceRefreshData() {
+      closeSettings();
+      if(confirm("スマホ内のクイズデータを一度すべて消去し、サーバーから最新のデータをダウンロードし直します。\nよろしいですか？（成績は消えません）")) {
+        localStorage.removeItem('quiz_app_masterdata'); 
+        localStorage.removeItem('quiz_app_master_ver');
+        window.location.reload(true);
+      }
     }
 
     function getFetchUrl(baseQuery) {
@@ -772,7 +783,6 @@
       }
       document.getElementById('answer-select').selectedIndex = 0;
       
-      // ★修正：会社名を消し、路線名と駅名だけをストイックに表示する仕様に変更！
       if (currentMode === 'station' || (currentMode === 'review' && currentQuestion.mode === 'station')) {
         document.getElementById('q-text').innerHTML = `
           <div style="font-size:14px; color:#666; background:#e9ecef; padding:4px 10px; border-radius:15px; display:inline-block; margin-bottom:10px;">🛤️ ${currentQuestion.line}</div>
@@ -860,7 +870,7 @@
           mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(currentQuestion.a + " " + currentQuestion.q);
           wikiUrl = currentQuestion.wiki || ("https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.q));
         } else if (currentMode === 'station' || (currentMode === 'review' && currentQuestion.mode === 'station')) {
-          mapUrl = `https://www.google.com/maps/search/?api=1&query=$${currentQuestion.lat},${currentQuestion.lng}`;
+          mapUrl = `http://googleusercontent.com/maps.google.com/4{currentQuestion.lat},${currentQuestion.lng}`;
           wikiUrl = "https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.q);
         } else {
           mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(currentQuestion.a + " " + currentQuestion.q);

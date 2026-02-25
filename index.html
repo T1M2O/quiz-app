@@ -39,9 +39,9 @@
     .stats-bar { display: flex; justify-content: space-around; background: #333; color: white; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; }
     .stats-item span { font-size: 18px; font-weight: bold; color: #ffc107; margin-left: 5px; }
     
-    /* ★修正: 余白を極限まで詰める */
-    .quiz-header { font-size: 14px; color: #666; margin-bottom: 2px; }
-    .quiz-text { font-size: 24px; font-weight: bold; margin: 5px 0; min-height: 1.2em; line-height: 1.4; white-space: pre-wrap; }
+    /* ★修正: 余白をピッタリと指定 */
+    .quiz-header { font-size: 14px; color: #666; margin-bottom: 5px; }
+    .quiz-text { font-size: 24px; font-weight: bold; margin: 5px 0 15px 0; min-height: 1.2em; line-height: 1.4; white-space: pre-wrap; }
     ruby { ruby-align: center; }
     rt { font-size: 10px; color: #666; font-weight: normal; }
     
@@ -303,7 +303,7 @@
       <div class="quiz-text" id="q-text"></div>
     </div>
     
-    <div style="margin-top: 15px;">
+    <div>
       <div id="normal-answer-area">
         <div id="map-container">
           <div id="map"></div>
@@ -341,7 +341,7 @@
   </div>
 
   <script>
-    const HTML_VERSION = "3.0.4"; 
+    const HTML_VERSION = "3.0.5"; 
     
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); }); }
 
@@ -465,8 +465,6 @@
         if (map) return; 
 
         map = L.map('map', { zoomControl: true }).setView([38.0, 137.0], 4.5); 
-        
-        // ★修正：maxZoomを19に引き上げ（限界突破）
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap',
             maxZoom: 19, minZoom: 4
@@ -857,23 +855,18 @@
         }
       }
       
+      // ★修正：改行文字をコードから完全に排除し、CSSのpre-wrapによる余白を撲滅！
       if (currentMode === 'station' || (currentMode === 'review' && currentQuestion.mode === 'station')) {
-        document.getElementById('q-text').innerHTML = `
-          <div style="color:#17a2b8; text-align:center; font-size:28px; font-weight:bold; line-height:1.1;">
-            <div style="margin-bottom: 4px;">${currentQuestion.line}</div>
-            <div>${currentQuestion.q}</div>
-          </div>
-        `;
+        document.getElementById('q-text').innerHTML = '<span style="color:#17a2b8; font-size:28px; line-height:1.4;">' + currentQuestion.line + '<br>' + currentQuestion.q + '</span>';
       } else {
         let qHtml = currentQuestion.q;
-        if (currentQuestion.q_kana) qHtml = `<ruby>${currentQuestion.q}<rt>${currentQuestion.q_kana}</rt></ruby>`;
+        if (currentQuestion.q_kana) qHtml = '<ruby>' + currentQuestion.q + '<rt>' + currentQuestion.q_kana + '</rt></ruby>';
         document.getElementById('q-text').innerHTML = qHtml;
       }
       
-      // ★修正：画像がないときはコンテナ自体を非表示にして余白を消す
       const imgCont = document.getElementById('q-img-container');
       if (currentQuestion.i) {
-        imgCont.innerHTML = `<img src="${currentQuestion.i}" class="quiz-img">`;
+        imgCont.innerHTML = '<img src="' + currentQuestion.i + '" class="quiz-img">';
         imgCont.classList.remove('hidden');
       } else {
         imgCont.innerHTML = '';
@@ -937,15 +930,15 @@
       let correctDisplayHtml = "";
       if (currentMode === 'city' || (currentMode === 'review' && currentQuestion.mode === 'city')) {
         const matchingRows = appData.city.filter(item => item.q === currentQuestion.q);
-        correctDisplayHtml = matchingRows.map(item => item.a_kana ? `<ruby>${item.a}<rt>${item.a_kana}</rt></ruby>` : item.a).join(' / ');
+        correctDisplayHtml = matchingRows.map(item => item.a_kana ? '<ruby>' + item.a + '<rt>' + item.a_kana + '</rt></ruby>' : item.a).join(' / ');
       } else {
-        correctDisplayHtml = currentQuestion.q_kana ? `<ruby>${currentQuestion.a}<rt>${currentQuestion.q_kana}</rt></ruby>` : currentQuestion.a;
+        correctDisplayHtml = currentQuestion.q_kana ? '<ruby>' + currentQuestion.a + '<rt>' + currentQuestion.q_kana + '</rt></ruby>' : currentQuestion.a;
       }
       document.getElementById('res-ans').innerHTML = correctDisplayHtml;
 
       if (currentMode === 'hidden') {
         document.getElementById('link-container').classList.add('hidden');
-        document.getElementById('exp-img-container').innerHTML = currentQuestion.expImg ? `<div style="margin-top:10px;"><img src="${currentQuestion.expImg}" onclick="openImageViewer('${currentQuestion.expImg}')" style="width:100%; max-height:280px; border-radius:8px; object-fit:contain; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor:pointer;"><div style="font-size:11px; color:#888; margin-top:5px;">👆画像をタップすると拡大します</div></div>` : "";
+        document.getElementById('exp-img-container').innerHTML = currentQuestion.expImg ? '<div style="margin-top:10px;"><img src="' + currentQuestion.expImg + '" onclick="openImageViewer(\'' + currentQuestion.expImg + '\')" style="width:100%; max-height:280px; border-radius:8px; object-fit:contain; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor:pointer;"><div style="font-size:11px; color:#888; margin-top:5px;">👆画像をタップすると拡大します</div></div>' : "";
       } else {
         document.getElementById('link-container').classList.remove('hidden');
         document.getElementById('exp-img-container').innerHTML = ""; 

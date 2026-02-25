@@ -16,10 +16,13 @@
   <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f5fe.png">
   <link rel="icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f5fe.png">
 
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
   <style>
     body { font-family: "Helvetica Neue", Arial, sans-serif; text-align: center; background-color: #f0f8ff; margin: 0; padding: 20px; color: #333; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
     .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; min-height: 500px; display: flex; flex-direction: column; position: relative; }
-    input[type="text"], input[type="password"], select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: white; -webkit-appearance: none; appearance: none; }
+    input[type="text"], input[type="password"] { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: white; -webkit-appearance: none; appearance: none; }
     
     .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: transform 0.1s; text-decoration: none; box-sizing: border-box; }
     .btn:active { transform: scale(0.98); }
@@ -29,7 +32,7 @@
     .btn-review { background: #dc3545; }
     .btn-stats { background: #6f42c1; }
     .btn-giveup { background: #6c757d; margin-top: 5px; }
-    .btn-dummy { background: #e0e0e0; color: #888; cursor: not-allowed; }
+    .btn-dummy { background: #e0e0e0; color: #888; cursor: not-allowed; border: 2px solid #ccc;}
     .btn-choice { background: #f8f9fa; color: #333; border: 2px solid #007bff; }
     
     .hidden { display: none !important; }
@@ -89,6 +92,10 @@
     .tab-container { display: flex; margin-bottom: 15px; border-bottom: 2px solid #eee; }
     .tab { flex: 1; padding: 10px; font-weight: bold; color: #888; cursor: pointer; }
     .tab.active { color: #007bff; border-bottom: 2px solid #007bff; margin-bottom: -2px; }
+
+    /* ★追加：地図コンテナのスタイル */
+    #map-container { width: 100%; height: 320px; margin-bottom: 10px; border-radius: 8px; border: 2px solid #ccc; box-sizing: border-box; z-index: 10;}
+    #map { width: 100%; height: 100%; border-radius: 6px; }
   </style>
 </head>
 <body>
@@ -123,25 +130,21 @@
   <div id="auth-modal" class="modal-overlay hidden" style="z-index: 99990;">
     <div class="modal-content" style="max-height: 85vh;">
       <h2 style="color:#00B900; margin-top:0;">ジオゲ対策クイズ</h2>
-      
       <div style="text-align:left; font-size:13px; color:#555; margin-bottom:15px; background:#f8f9fa; padding:10px; border-radius:8px;">
         <strong>📖 遊び方</strong><br>
         表示された画像やテキストから、そこがどの都道府県にあるかを当てるクイズです。<br>
         間違えた問題は自動で記録され、「🔥 復習モード」で効率よく学習できます！
       </div>
-
       <div class="tab-container">
         <div class="tab active" id="tab-register" onclick="switchAuthTab('register')">新規登録</div>
         <div class="tab" id="tab-login" onclick="switchAuthTab('login')">ログイン</div>
       </div>
-
       <div id="area-register">
         <p style="font-size:12px; color:#666; margin:0 0 10px 0;">データを記録するため、お好きな名前とパスワードを設定してください。</p>
         <input type="text" id="reg-name" placeholder="ニックネーム">
         <input type="password" id="reg-pass" placeholder="パスワード">
         <button class="btn" style="background:#00B900; margin-top:15px;" onclick="registerAccount()">はじめる</button>
       </div>
-
       <div id="area-login" class="hidden">
         <p style="font-size:12px; color:#666; margin:0 0 10px 0;">以前作成したアカウントを引き継ぎます。</p>
         <input type="text" id="login-name" placeholder="ニックネーム">
@@ -217,8 +220,8 @@
     <div class="modal-content" style="max-height: 70vh;">
       <h3 style="margin-top:0;">📖 使い方説明</h3>
       <div class="help-section">
-        <h4>🏙 市町村 / ⛩️ 観光地 / 🚉 鉄道駅クイズ</h4>
-        表示された情報の場所がどの都道府県にあるかを当てるクイズです。不正解だった問題は自動で記録されます。
+        <h4>🗺️ マップ回答機能 (Ver 3.0)</h4>
+        日本地図をタップして都道府県を選択し、解答ボタンを押してください。<br>誤操作を防ぐため、タップしてから回答確定する安心設計です。
       </div>
       <div class="help-section">
         <h4>🔥 復習モード</h4>
@@ -302,8 +305,10 @@
     
     <div style="margin-top: auto;">
       <div id="normal-answer-area">
-        <select id="answer-select"><option value="" disabled selected>都道府県を選択してください</option></select>
-        <button class="btn" onclick="submitAnswer()">回答する</button>
+        <div id="map-container">
+          <div id="map"></div>
+        </div>
+        <button class="btn btn-dummy" id="btn-submit-map" onclick="submitMapAnswer()" disabled>🗺️ 地図をタップして選択</button>
         <button class="btn btn-giveup" onclick="giveUp()">🏳️ 分からない</button>
       </div>
 
@@ -336,11 +341,9 @@
   </div>
 
   <script>
-    const HTML_VERSION = "2.7.4"; 
+    const HTML_VERSION = "3.0"; // ★メジャーアップデート！
     
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); });
-    }
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); }); }
 
     const savedHtmlVersion = localStorage.getItem('quiz_html_version');
     if (savedHtmlVersion !== HTML_VERSION) {
@@ -348,6 +351,7 @@
       localStorage.setItem('quiz_html_version', HTML_VERSION);
       localStorage.removeItem('quiz_app_masterdata'); 
       localStorage.removeItem('quiz_app_master_ver');
+      sessionStorage.removeItem('activeScreen');
       window.location.reload(true);
     }
 
@@ -357,7 +361,11 @@
     let currentMode = null; let currentQuestion = null; let wrongList = null; 
     let currentChoices = []; let hiddenQueue = []; 
 
-    const prefectures = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
+    // ★追加：Leafletマップ関連の変数
+    let map;
+    let geojsonLayer;
+    let selectedPrefecture = "";
+    let selectedLayer = null;
 
     let audioCtx;
     let soundEnabled = (localStorage.getItem('quiz_app_sound') !== 'false');
@@ -430,12 +438,6 @@
 
     window.onload = function() {
       document.getElementById('app-version-display').innerText = HTML_VERSION;
-
-      const select = document.getElementById('answer-select');
-      prefectures.forEach(pref => {
-        const option = document.createElement('option'); option.value = pref; option.textContent = pref; select.appendChild(option);
-      });
-      
       document.getElementById('sound-toggle').checked = soundEnabled;
       document.getElementById('sound-vol').value = soundVol;
       updateVolUI();
@@ -451,6 +453,67 @@
         document.getElementById('auth-modal').classList.remove('hidden');
       }
     };
+
+    // ★追加：GeoJSONの名前揺れ（東京 vs 東京都など）を吸収する関数
+    function normalizePrefName(name) {
+        if(!name) return "";
+        const prefs = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
+        if (prefs.includes(name)) return name;
+        const match = prefs.find(p => p.startsWith(name) || name.startsWith(p));
+        return match || name;
+    }
+
+    // ★追加：Leafletマップの初期化関数
+    function initLeafletMap() {
+        if (map) return; 
+
+        map = L.map('map', { zoomControl: true }).setView([38.0, 137.0], 4.5); 
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap',
+            maxZoom: 10, minZoom: 4
+        }).addTo(map);
+
+        showLoading("地図データを読み込み中...");
+        
+        // Githubから日本の都道府県ポリゴンデータ(GeoJSON)を取得
+        fetch('https://raw.githubusercontent.com/dataofjapan/land/master/japan.geojson')
+            .then(res => res.json())
+            .then(data => {
+                hideLoading();
+                geojsonLayer = L.geoJSON(data, {
+                    style: { color: '#007bff', weight: 1, fillOpacity: 0.1, fillColor: '#007bff' },
+                    onEachFeature: function(feature, layer) {
+                        layer.on('click', function() {
+                            if (selectedLayer) geojsonLayer.resetStyle(selectedLayer); // 前の選択をリセット
+                            
+                            // タップした都道府県名を取得
+                            let rawName = feature.properties.nam_ja || feature.properties.name || feature.properties.name_ja;
+                            selectedPrefecture = normalizePrefName(rawName);
+
+                            // 色を赤くして選択状態にする
+                            layer.setStyle({ fillColor: '#ff0000', fillOpacity: 0.5, weight: 2 });
+                            selectedLayer = layer;
+
+                            // 回答ボタンをアクティブに変更
+                            const btn = document.getElementById('btn-submit-map');
+                            btn.innerText = `👆 ${selectedPrefecture} で回答する`;
+                            btn.disabled = false;
+                            btn.classList.remove('btn-dummy');
+                            btn.style.background = '#00B900'; 
+                            btn.style.color = 'white';
+                            playTone(880, 'sine', 0.05, 0.3); // タップ音
+                        });
+                    }
+                }).addTo(map);
+                
+                // 日本が画面にぴったり収まるように自動ズーム
+                map.fitBounds(geojsonLayer.getBounds());
+            })
+            .catch(err => {
+                hideLoading();
+                myAlert("地図データの読み込みに失敗しました。通信環境を確認してください。");
+            });
+    }
 
     function switchAuthTab(tab) {
       if(tab === 'register') {
@@ -490,7 +553,6 @@
     function closeSubModal(id) { document.getElementById(id).classList.add('hidden'); openSettings(); }
     function openNewsModal() { document.getElementById('news-modal').classList.remove('hidden'); }
     function closeNewsModal() { document.getElementById('news-modal').classList.add('hidden'); }
-
     function clearLoginData() { localStorage.removeItem('quiz_app_name'); localStorage.removeItem('quiz_app_pass'); }
 
     function showStartupError(msg) {
@@ -504,7 +566,7 @@
       if(confirm("スマホ内のクイズデータを一度すべて消去し、サーバーから最新のデータをダウンロードし直します。\nよろしいですか？（成績は消えません）")) {
         localStorage.removeItem('quiz_app_masterdata'); 
         localStorage.removeItem('quiz_app_master_ver');
-        sessionStorage.removeItem('activeScreen'); // 画面状態もリセット
+        sessionStorage.removeItem('activeScreen');
         window.location.reload(true);
       }
     }
@@ -749,6 +811,19 @@
 
     function nextQuestion() {
       document.getElementById('result-overlay').classList.add('hidden');
+      
+      // ★マップ状態の初期化
+      if(selectedLayer && geojsonLayer) geojsonLayer.resetStyle(selectedLayer);
+      selectedPrefecture = "";
+      selectedLayer = null;
+      const btn = document.getElementById('btn-submit-map');
+      if (btn) {
+        btn.innerText = "🗺️ 地図をタップして選択";
+        btn.disabled = true;
+        btn.classList.add('btn-dummy');
+        btn.style.background = ''; btn.style.color = '';
+      }
+
       if (currentMode === 'hidden') {
         document.getElementById('normal-answer-area').classList.add('hidden'); document.getElementById('hidden-answer-area').classList.remove('hidden');
         document.getElementById('q-header').innerText = "㊙️ 隠しクイズ ㊙️"; document.getElementById('st-correct').innerText = "㊙️"; document.getElementById('st-rate').innerText = "隠れ";
@@ -763,6 +838,10 @@
         document.getElementById('normal-answer-area').classList.remove('hidden'); document.getElementById('hidden-answer-area').classList.add('hidden');
         document.getElementById('q-header').innerText = "この場所がある都道府県は？";
         
+        // ★マップの描画を確実に実行
+        initLeafletMap();
+        setTimeout(() => { if(map) { map.invalidateSize(); if(geojsonLayer) map.fitBounds(geojsonLayer.getBounds()); } }, 200);
+
         if (currentMode === 'review') {
           if (!wrongList || wrongList.length === 0) { myAlert("復習完了！メニューに戻ります。"); return backToMenu(); }
           const randKey = wrongList[Math.floor(Math.random() * wrongList.length)];
@@ -785,7 +864,6 @@
           document.getElementById('st-correct').innerText = s.correct + '/' + s.total; document.getElementById('st-rate').innerText = s.rate + '%';
         }
       }
-      document.getElementById('answer-select').selectedIndex = 0;
       
       if (currentMode === 'station' || (currentMode === 'review' && currentQuestion.mode === 'station')) {
         document.getElementById('q-text').innerHTML = `
@@ -801,10 +879,12 @@
       document.getElementById('q-img-container').innerHTML = currentQuestion.i ? `<img src="${currentQuestion.i}" class="quiz-img">` : '';
     }
 
-    function submitAnswer() {
-      const v = document.getElementById('answer-select').value;
-      if(!v) return myAlert("都道府県を選択してください"); processAnswer(v);
+    // ★追加：マップからの回答送信処理
+    function submitMapAnswer() {
+      if(!selectedPrefecture) return myAlert("地図から都道府県をタップして選択してください！");
+      processAnswer(selectedPrefecture);
     }
+    
     function giveUp() { processAnswer("GIVE_UP"); }
     function submitHiddenAnswer(index) { processAnswer(currentChoices[index]); }
 
@@ -845,7 +925,6 @@
       showResult(isCorrect, ans, validAnswers);
     }
 
-    // ★修正：Google MapのリンクURLフォーマットを完全修正
     function showResult(isCorrect, ans, validAnswers) {
       if(isCorrect) playCorrectSound(); else playWrongSound();
       const overlay = document.getElementById('result-overlay');
@@ -871,8 +950,6 @@
         document.getElementById('exp-img-container').innerHTML = ""; 
         
         let mapUrl, wikiUrl;
-        
-        // ★修正：検索・座標パラメータを公式の正しい形式に直しました
         if (currentMode === 'city' || (currentMode === 'review' && currentQuestion.mode === 'city')) {
           mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(currentQuestion.a + " " + currentQuestion.q);
           wikiUrl = currentQuestion.wiki || ("https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.q));

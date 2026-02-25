@@ -29,7 +29,7 @@
     .btn-city { background: #00B900; }
     .btn-tour { background: #E67E22; }
     .btn-station { background: #17a2b8; } 
-    .btn-world { background: #E74C3C; } /* ★世界クイズ用カラー */
+    .btn-world { background: #E74C3C; } 
     .btn-review { background: #dc3545; }
     .btn-stats { background: #6f42c1; }
     .btn-giveup { background: #6c757d; margin-top: 5px; }
@@ -97,7 +97,6 @@
     #map-container { width: 100%; height: 320px; margin-bottom: 10px; border-radius: 8px; border: 2px solid #ccc; box-sizing: border-box; z-index: 10; background: #aad3df;}
     #map { width: 100%; height: 100%; border-radius: 6px; }
 
-    /* ダークモード用のスタイル */
     body.dark-mode { background-color: #121212; color: #e0e0e0; }
     .dark-mode .card { background: #1e1e1e; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
     .dark-mode input[type="text"], .dark-mode input[type="password"] { background: #2d2d2d; color: #e0e0e0; border-color: #444; }
@@ -379,7 +378,7 @@
   </div>
 
   <script>
-    const HTML_VERSION = "4.0"; // ★超メジャーアップデート！
+    const HTML_VERSION = "4.0.1"; 
     
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); }); }
 
@@ -395,7 +394,6 @@
 
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzv0Gz2d0Ex0NDW8MHuHX6tCKqtGGsUfXrqhQFnar0F0Xw9y5RaFDKz13JZQTh_x2Nk/exec";
     
-    // ★追加：worldデータを保持する配列
     let appData = { stats: null, city: [], tourist: [], station: [], world: [], news: [], hidden: [] };
     let currentMode = null; let currentQuestion = null; let wrongList = null; 
     let currentChoices = []; let hiddenQueue = []; 
@@ -516,9 +514,8 @@
         return match || name;
     }
 
-    // ★大改造：日本地図と世界地図を動的に切り替える最強のマップ生成システム
+    // ★修正：地図データの変更と、強力なフェイルセーフの追加
     function initLeafletMap(mapType) {
-        // すでにマップがあれば一度完全に破壊して作り直す（バグ防止）
         if (map) { map.remove(); map = null; selectedLayer = null; selectedPrefecture = ""; }
 
         map = L.map('map', { zoomControl: true }); 
@@ -526,12 +523,11 @@
         let geojsonUrl = "";
         
         if (mapType === 'world') {
-            // 世界地図モード
             map.setView([20.0, 0.0], 2);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 10, minZoom: 1 }).addTo(map);
-            geojsonUrl = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
+            // ★最高品質のNatural Earthデータに変更
+            geojsonUrl = 'https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@5.0.0/geojson/ne_110m_admin_0_countries.geojson';
         } else {
-            // 日本地図モード
             map.setView([38.0, 137.0], 4.5); 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, minZoom: 4 }).addTo(map);
             geojsonUrl = 'https://raw.githubusercontent.com/dataofjapan/land/master/japan.geojson';
@@ -553,19 +549,28 @@
                             let ansValue = "";
                             
                             if (mapType === 'world') {
-                                // 国コード(2桁)を取得
-                                let code = feature.properties.ISO_A2;
-                                if(code) code = code.toLowerCase();
+                                // ★大修正：多角的なプロパティ検索で「undefined」を絶対に防ぐ
+                                let props = feature.properties;
+                                let code2 = props.ISO_A2 || props.iso_a2 || "";
+                                code2 = code2.toLowerCase();
                                 
-                                // 裏側のWorldDBと照らし合わせて日本語の国名を導き出す！
-                                let match = appData.world.find(w => w.code === code);
-                                if (!match) match = appData.world.find(w => w.a_en === feature.properties.ADMIN); // 念のための英語名フォールバック
+                                let engName = props.NAME || props.name || props.ADMIN || props.admin || "";
+                                let jaName = props.NAME_JA || props.name_ja || engName;
+                                
+                                // 1. まず国コード(cca2)でWorldDBと照合
+                                let match = appData.world.find(w => w.code === code2);
+                                
+                                // 2. 見つからなければ英語名でWorldDBと照合
+                                if (!match && engName) {
+                                    match = appData.world.find(w => w.a_en.toLowerCase() === engName.toLowerCase());
+                                }
                                 
                                 if (match) {
                                     dispName = match.a; 
                                     ansValue = match.a;
                                 } else {
-                                    dispName = feature.properties.ADMIN; // DBにない謎の島などをタップした時
+                                    // 3. どちらでも見つからない小さな島などは、GeoJSONの持つ名前をそのまま出す
+                                    dispName = jaName || "不明な地域"; 
                                     ansValue = dispName;
                                 }
                             } else {
@@ -574,7 +579,7 @@
                                 ansValue = dispName;
                             }
 
-                            selectedPrefecture = ansValue; // 正解判定用にセット
+                            selectedPrefecture = ansValue; 
 
                             layer.setStyle({ fillColor: '#ff0000', fillOpacity: 0.5, weight: 2 });
                             selectedLayer = layer;
@@ -590,7 +595,6 @@
                     }
                 }).addTo(map);
                 
-                // 日本の時は画面にピッタリ合わせる
                 if (mapType === 'japan') map.fitBounds(geojsonLayer.getBounds());
             })
             .catch(err => {
@@ -665,7 +669,7 @@
         appData.city = parsed.city;
         appData.tourist = parsed.tourist;
         appData.station = parsed.station || []; 
-        appData.world = parsed.world || []; // ★追加
+        appData.world = parsed.world || []; 
       } else {
         url += "&needMaster=true";
       }
@@ -769,7 +773,7 @@
         appData.city = res.masterData.city;
         appData.tourist = res.masterData.tourist;
         appData.station = res.masterData.station || []; 
-        appData.world = res.masterData.world || []; // ★追加
+        appData.world = res.masterData.world || []; 
         localStorage.setItem('quiz_app_masterdata', JSON.stringify(res.masterData));
         localStorage.setItem('quiz_app_master_ver', HTML_VERSION);
       }
@@ -883,7 +887,7 @@
       if(mode === 'city') dataset = appData.city;
       else if(mode === 'tourist') dataset = appData.tourist;
       else if(mode === 'station') dataset = appData.station;
-      else if(mode === 'world') dataset = appData.world; // ★追加
+      else if(mode === 'world') dataset = appData.world; 
 
       if (!dataset || dataset.length === 0) {
         sessionStorage.setItem('activeScreen', 'menu'); 
@@ -928,7 +932,6 @@
         if (currentMode === 'review') {
           if (!wrongList || wrongList.length === 0) { myAlert("復習完了！メニューに戻ります。"); return backToMenu(); }
           const randKey = wrongList[Math.floor(Math.random() * wrongList.length)];
-          // ★修正：復習モードでworldデータも検索対象に
           currentQuestion = appData.city.find(item => (item.q + "_" + item.a) === randKey) || 
                             appData.tourist.find(item => (item.q + "_" + item.a) === randKey) || 
                             appData.station.find(item => (item.q + "_" + item.a) === randKey) ||
@@ -952,7 +955,6 @@
           document.getElementById('st-correct').innerText = s.correct + '/' + s.total; document.getElementById('st-rate').innerText = s.rate + '%';
         }
 
-        // ★追加：世界地図と日本地図の出し分け
         if (currentMode === 'world' || (currentMode === 'review' && currentQuestion.mode === 'world')) {
             document.getElementById('q-header').innerText = "この国旗の国はどこ？";
             initLeafletMap('world');
@@ -963,11 +965,9 @@
         setTimeout(() => { if(map) { map.invalidateSize(); if(geojsonLayer && (currentMode !== 'world' && currentQuestion.mode !== 'world')) map.fitBounds(geojsonLayer.getBounds()); } }, 200);
       }
       
-      // 問題文の表示設定
       if (currentMode === 'station' || (currentMode === 'review' && currentQuestion.mode === 'station')) {
         document.getElementById('q-text').innerHTML = '<span style="color:#17a2b8; font-size:28px; line-height:1.4;">' + currentQuestion.line + '<br>' + currentQuestion.q + '</span>';
       } else if (currentMode === 'world' || (currentMode === 'review' && currentQuestion.mode === 'world')) {
-        // ★追加：国旗クイズの時は文字の代わりに国旗を大きく表示するため、テキストは空にする
         document.getElementById('q-text').innerHTML = '';
       } else {
         let qHtml = currentQuestion.q;
@@ -977,7 +977,6 @@
       
       const imgCont = document.getElementById('q-img-container');
       if (currentQuestion.i) {
-        // 世界クイズの国旗は少し大きめに表示
         let imgStyle = (currentMode === 'world' || (currentMode === 'review' && currentQuestion.mode === 'world')) ? 'max-height: 180px; width: auto; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);' : 'max-height: 200px; width: auto;';
         imgCont.innerHTML = `<img src="${currentQuestion.i}" style="${imgStyle}" class="quiz-img">`;
         imgCont.classList.remove('hidden');
@@ -1065,7 +1064,6 @@
           mapUrl = "https://www.google.com/maps/search/?api=1&query=" + currentQuestion.lat + "," + currentQuestion.lng;
           wikiUrl = "https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.q);
         } else if (currentMode === 'world' || (currentMode === 'review' && currentQuestion.mode === 'world')) {
-          // ★追加：世界クイズ用リンク
           mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(currentQuestion.a);
           wikiUrl = "https://ja.wikipedia.org/wiki/" + encodeURIComponent(currentQuestion.a);
         } else {

@@ -20,7 +20,6 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
   <style>
-    /* 通常（ライト）モードのスタイル */
     body { font-family: "Helvetica Neue", Arial, sans-serif; text-align: center; background-color: #f0f8ff; margin: 0; padding: 20px; color: #333; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; transition: background-color 0.3s, color 0.3s;}
     .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; min-height: 500px; display: flex; flex-direction: column; position: relative; transition: background-color 0.3s;}
     input[type="text"], input[type="password"] { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: white; -webkit-appearance: none; appearance: none; }
@@ -97,7 +96,7 @@
     #map-container { width: 100%; height: 320px; margin-bottom: 10px; border-radius: 8px; border: 2px solid #ccc; box-sizing: border-box; z-index: 10;}
     #map { width: 100%; height: 100%; border-radius: 6px; }
 
-    /* ★追加：ダークモード用のスタイル */
+    /* ダークモード用のスタイル */
     body.dark-mode { background-color: #121212; color: #e0e0e0; }
     .dark-mode .card { background: #1e1e1e; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
     .dark-mode input[type="text"], .dark-mode input[type="password"] { background: #2d2d2d; color: #e0e0e0; border-color: #444; }
@@ -119,8 +118,7 @@
     .dark-mode #map-container { border-color: #444; }
     .dark-mode .help-section { border-bottom-color: #444; color: #ccc; }
     
-    /* マップのダーク化裏技（OSMの地図タイルだけを色反転させてダーク風にする） */
-    .dark-mode .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+    /* ★修正: 地図のダーク化フィルターを削除しました（通常カラーで表示されます） */
   </style>
 </head>
 <body>
@@ -381,7 +379,7 @@
   </div>
 
   <script>
-    const HTML_VERSION = "3.0.6"; 
+    const HTML_VERSION = "3.0.7"; 
     
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); }); }
 
@@ -410,7 +408,6 @@
     let soundEnabled = (localStorage.getItem('quiz_app_sound') !== 'false');
     let soundVol = parseInt(localStorage.getItem('quiz_app_vol')) || 50;
     
-    // ★追加：ダークモードのフラグ
     let isDarkMode = (localStorage.getItem('quiz_app_darkmode') === 'true');
 
     function initAudio() {
@@ -479,7 +476,6 @@
       playTone(600, 'sine', 0.1, 0.3);
     }
 
-    // ★追加：ダークモード切り替え関数
     function toggleDarkMode() {
         isDarkMode = document.getElementById('dark-toggle').checked;
         localStorage.setItem('quiz_app_darkmode', isDarkMode);
@@ -496,7 +492,6 @@
       document.getElementById('sound-vol').value = soundVol;
       updateVolUI();
 
-      // ★追加：ダークモードの初期反映
       document.getElementById('dark-toggle').checked = isDarkMode;
       if (isDarkMode) document.body.classList.add('dark-mode');
 

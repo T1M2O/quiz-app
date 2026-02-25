@@ -20,8 +20,9 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
   <style>
-    body { font-family: "Helvetica Neue", Arial, sans-serif; text-align: center; background-color: #f0f8ff; margin: 0; padding: 20px; color: #333; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
-    .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; min-height: 500px; display: flex; flex-direction: column; position: relative; }
+    /* 通常（ライト）モードのスタイル */
+    body { font-family: "Helvetica Neue", Arial, sans-serif; text-align: center; background-color: #f0f8ff; margin: 0; padding: 20px; color: #333; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; transition: background-color 0.3s, color 0.3s;}
+    .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; min-height: 500px; display: flex; flex-direction: column; position: relative; transition: background-color 0.3s;}
     input[type="text"], input[type="password"] { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: white; -webkit-appearance: none; appearance: none; }
     
     .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: transform 0.1s; text-decoration: none; box-sizing: border-box; }
@@ -39,7 +40,6 @@
     .stats-bar { display: flex; justify-content: space-around; background: #333; color: white; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; }
     .stats-item span { font-size: 18px; font-weight: bold; color: #ffc107; margin-left: 5px; }
     
-    /* ★修正: 余白をピッタリと指定 */
     .quiz-header { font-size: 14px; color: #666; margin-bottom: 5px; }
     .quiz-text { font-size: 24px; font-weight: bold; margin: 5px 0 15px 0; min-height: 1.2em; line-height: 1.4; white-space: pre-wrap; }
     ruby { ruby-align: center; }
@@ -47,7 +47,7 @@
     
     .quiz-img { max-height: 200px; width: auto; max-width: 100%; border-radius: 8px; object-fit: contain; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     
-    .result-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.98); border-radius: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000; overflow-y: auto; padding: 20px 0;}
+    .result-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.98); border-radius: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000; overflow-y: auto; padding: 20px 0; transition: background-color 0.3s;}
     .res-icon { font-size: 80px; margin-bottom: 10px; }
     .res-text { font-size: 32px; font-weight: bold; margin-bottom: 20px; }
     .correct-box { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 20px; width: 80%; }
@@ -60,7 +60,7 @@
     .settings-icon:active { transform: rotate(90deg); }
     
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; justify-content: center; align-items: center; }
-    .modal-content { background: white; width: 85%; max-width: 320px; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.2s ease-out; position: relative; max-height: 90vh; overflow-y: auto;}
+    .modal-content { background: white; width: 85%; max-width: 320px; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.2s ease-out; position: relative; max-height: 90vh; overflow-y: auto; transition: background-color 0.3s, color 0.3s;}
     @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     
     .settings-list { list-style: none; padding: 0; margin: 0; text-align: left; }
@@ -96,6 +96,31 @@
 
     #map-container { width: 100%; height: 320px; margin-bottom: 10px; border-radius: 8px; border: 2px solid #ccc; box-sizing: border-box; z-index: 10;}
     #map { width: 100%; height: 100%; border-radius: 6px; }
+
+    /* ★追加：ダークモード用のスタイル */
+    body.dark-mode { background-color: #121212; color: #e0e0e0; }
+    .dark-mode .card { background: #1e1e1e; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    .dark-mode input[type="text"], .dark-mode input[type="password"] { background: #2d2d2d; color: #e0e0e0; border-color: #444; }
+    .dark-mode .modal-content { background: #1e1e1e; color: #e0e0e0; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .dark-mode .settings-list li { border-bottom-color: #333; }
+    .dark-mode .btn-choice { background: #2d2d2d; color: #e0e0e0; border-color: #007bff; }
+    .dark-mode .btn-dummy { background: #2d2d2d; color: #888; border-color: #444; }
+    .dark-mode .result-overlay { background: rgba(30, 30, 30, 0.95); }
+    .dark-mode .correct-box { background: #2d2d2d; border-color: #444; }
+    .dark-mode .news-box { background: #3a3219; border-color: #665111; color: #e0e0e0; }
+    .dark-mode .news-item { border-bottom-color: #444; color: #ccc; }
+    .dark-mode .quiz-header { color: #aaa; }
+    .dark-mode rt { color: #aaa; }
+    .dark-mode .stats-card { background: #2d2d2d; border-left-color: #007bff;}
+    .dark-mode .progress-bg { background: #444; }
+    .dark-mode .tab-container { border-bottom-color: #444; }
+    .dark-mode .tab { color: #888; }
+    .dark-mode .tab.active { color: #007bff; border-bottom-color: #007bff; }
+    .dark-mode #map-container { border-color: #444; }
+    .dark-mode .help-section { border-bottom-color: #444; color: #ccc; }
+    
+    /* マップのダーク化裏技（OSMの地図タイルだけを色反転させてダーク風にする） */
+    .dark-mode .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
   </style>
 </head>
 <body>
@@ -158,6 +183,7 @@
     <div class="modal-content" style="padding:15px;">
       <h3 style="margin-top:0; border-bottom:2px solid #007bff; padding-bottom:5px;">⚙️ 設定</h3>
       <ul class="settings-list">
+        <li onclick="openSubModal('display-modal')"><span class="icon">🌙</span> 画面表示設定</li>
         <li onclick="openSubModal('sound-modal')"><span class="icon">🎵</span> サウンド設定</li>
         <li onclick="openSubModal('account-modal')"><span class="icon">👤</span> アカウント情報変更</li>
         <li onclick="forceRefreshData()" style="color:#007bff;"><span class="icon">🔄</span> 全データ再取得 (不具合時)</li>
@@ -167,6 +193,20 @@
         <li onclick="openSubModal('delete-modal')" style="color:#dc3545;"><span class="icon">⚠️</span> アカウント削除</li>
       </ul>
       <button class="btn" style="background:#6c757d; margin-bottom:0;" onclick="closeSettings()">閉じる</button>
+    </div>
+  </div>
+
+  <div id="display-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">🌙 画面表示設定</h3>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin:20px 0;">
+        <span style="font-weight:bold;">ダークモード</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="dark-toggle" onchange="toggleDarkMode()">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <button class="btn" style="background:#6c757d; margin:0;" onclick="closeSubModal('display-modal')">戻る</button>
     </div>
   </div>
 
@@ -341,7 +381,7 @@
   </div>
 
   <script>
-    const HTML_VERSION = "3.0.5"; 
+    const HTML_VERSION = "3.0.6"; 
     
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); }); }
 
@@ -369,6 +409,9 @@
     let audioCtx;
     let soundEnabled = (localStorage.getItem('quiz_app_sound') !== 'false');
     let soundVol = parseInt(localStorage.getItem('quiz_app_vol')) || 50;
+    
+    // ★追加：ダークモードのフラグ
+    let isDarkMode = (localStorage.getItem('quiz_app_darkmode') === 'true');
 
     function initAudio() {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -419,6 +462,7 @@
       }
       updateSliderColor();
     }
+    
     function toggleSound() {
       soundEnabled = document.getElementById('sound-toggle').checked;
       localStorage.setItem('quiz_app_sound', soundEnabled);
@@ -435,11 +479,26 @@
       playTone(600, 'sine', 0.1, 0.3);
     }
 
+    // ★追加：ダークモード切り替え関数
+    function toggleDarkMode() {
+        isDarkMode = document.getElementById('dark-toggle').checked;
+        localStorage.setItem('quiz_app_darkmode', isDarkMode);
+        if (isDarkMode) {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
+    }
+
     window.onload = function() {
       document.getElementById('app-version-display').innerText = HTML_VERSION;
       document.getElementById('sound-toggle').checked = soundEnabled;
       document.getElementById('sound-vol').value = soundVol;
       updateVolUI();
+
+      // ★追加：ダークモードの初期反映
+      document.getElementById('dark-toggle').checked = isDarkMode;
+      if (isDarkMode) document.body.classList.add('dark-mode');
 
       const storedName = localStorage.getItem('quiz_app_name');
       const storedPass = localStorage.getItem('quiz_app_pass');
@@ -855,7 +914,6 @@
         }
       }
       
-      // ★修正：改行文字をコードから完全に排除し、CSSのpre-wrapによる余白を撲滅！
       if (currentMode === 'station' || (currentMode === 'review' && currentQuestion.mode === 'station')) {
         document.getElementById('q-text').innerHTML = '<span style="color:#17a2b8; font-size:28px; line-height:1.4;">' + currentQuestion.line + '<br>' + currentQuestion.q + '</span>';
       } else {

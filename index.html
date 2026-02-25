@@ -40,7 +40,8 @@
     .stats-item span { font-size: 18px; font-weight: bold; color: #ffc107; margin-left: 5px; }
     
     .quiz-header { font-size: 14px; color: #666; margin-bottom: 5px; }
-    .quiz-text { font-size: 24px; font-weight: bold; margin: 15px 0; min-height: 1.2em; line-height: 1.4; white-space: pre-wrap; }
+    /* ★修正: 上下のマージンを少し詰める */
+    .quiz-text { font-size: 24px; font-weight: bold; margin: 10px 0; min-height: 1.2em; line-height: 1.4; white-space: pre-wrap; }
     ruby { ruby-align: center; }
     rt { font-size: 10px; color: #666; font-weight: normal; }
     
@@ -340,7 +341,7 @@
   </div>
 
   <script>
-    const HTML_VERSION = "3.0.2"; 
+    const HTML_VERSION = "3.0.3"; 
     
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); }); }
 
@@ -854,12 +855,12 @@
         }
       }
       
-      // ★修正：駅クイズの表示をシンプルに、駅名と同じフォントサイズに変更
+      // ★修正：駅クイズのレイアウトを中央揃え＆余白詰め＆同じ大きさに変更
       if (currentMode === 'station' || (currentMode === 'review' && currentQuestion.mode === 'station')) {
         document.getElementById('q-text').innerHTML = `
-          <div style="color:#17a2b8; font-size:28px; line-height:1.3; margin-bottom:5px;">
-            ${currentQuestion.line}<br>
-            ${currentQuestion.q}
+          <div style="color:#17a2b8; text-align:center; font-size:28px; font-weight:bold; line-height:1.1;">
+            <div style="margin-bottom: 4px;">${currentQuestion.line}</div>
+            <div>${currentQuestion.q}</div>
           </div>
         `;
       } else {

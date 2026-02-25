@@ -378,7 +378,7 @@
   </div>
 
   <script>
-    const HTML_VERSION = "4.0.1"; 
+    const HTML_VERSION = "4.0.2"; 
     
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); }); }
 
@@ -514,7 +514,6 @@
         return match || name;
     }
 
-    // ★修正：地図データの変更と、強力なフェイルセーフの追加
     function initLeafletMap(mapType) {
         if (map) { map.remove(); map = null; selectedLayer = null; selectedPrefecture = ""; }
 
@@ -525,8 +524,8 @@
         if (mapType === 'world') {
             map.setView([20.0, 0.0], 2);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 10, minZoom: 1 }).addTo(map);
-            // ★最高品質のNatural Earthデータに変更
-            geojsonUrl = 'https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@5.0.0/geojson/ne_110m_admin_0_countries.geojson';
+            // ★修正：粗い「110m」から、海岸線が綺麗な中解像度「50m」データに変更！
+            geojsonUrl = 'https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@5.0.0/geojson/ne_50m_admin_0_countries.geojson';
         } else {
             map.setView([38.0, 137.0], 4.5); 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, minZoom: 4 }).addTo(map);
@@ -549,7 +548,6 @@
                             let ansValue = "";
                             
                             if (mapType === 'world') {
-                                // ★大修正：多角的なプロパティ検索で「undefined」を絶対に防ぐ
                                 let props = feature.properties;
                                 let code2 = props.ISO_A2 || props.iso_a2 || "";
                                 code2 = code2.toLowerCase();
@@ -557,10 +555,8 @@
                                 let engName = props.NAME || props.name || props.ADMIN || props.admin || "";
                                 let jaName = props.NAME_JA || props.name_ja || engName;
                                 
-                                // 1. まず国コード(cca2)でWorldDBと照合
                                 let match = appData.world.find(w => w.code === code2);
                                 
-                                // 2. 見つからなければ英語名でWorldDBと照合
                                 if (!match && engName) {
                                     match = appData.world.find(w => w.a_en.toLowerCase() === engName.toLowerCase());
                                 }
@@ -569,7 +565,6 @@
                                     dispName = match.a; 
                                     ansValue = match.a;
                                 } else {
-                                    // 3. どちらでも見つからない小さな島などは、GeoJSONの持つ名前をそのまま出す
                                     dispName = jaName || "不明な地域"; 
                                     ansValue = dispName;
                                 }

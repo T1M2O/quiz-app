@@ -52,7 +52,6 @@
     .res-text { font-size: 32px; font-weight: bold; margin-bottom: 20px; }
     .correct-box { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 20px; width: 80%; }
     
-    /* ★修正：お知らせ周りのスタイルを整理してダークモード対応しやすくしました */
     .news-box { text-align: left; background: #fff3cd; border: 1px solid #ffeeba; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; }
     .news-item { margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #eee; cursor: pointer; color: #555; }
     .news-date { font-weight: bold; display: block; margin-bottom: 3px; color: #856404; }
@@ -110,14 +109,11 @@
     .dark-mode .btn-dummy { background: #2d2d2d; color: #888; border-color: #444; }
     .dark-mode .result-overlay { background: rgba(30, 30, 30, 0.95); }
     .dark-mode .correct-box { background: #2d2d2d; border-color: #444; }
-    
-    /* ★修正：ダークモード時のお知らせ周りの配色を見やすく変更 */
     .dark-mode .news-box { background: #3a3219; border-color: #665111; color: #e0e0e0; }
     .dark-mode .news-item { border-bottom-color: #444; color: #ccc; }
-    .dark-mode .news-date { color: #f39c12; } /* 明るいオレンジ */
-    .dark-mode .news-title { color: #4dabf7; } /* 少し明るい水色 */
-    .dark-mode .news-details { border-top-color: #666; color: #eee; } /* 白系の文字色 */
-    
+    .dark-mode .news-date { color: #f39c12; }
+    .dark-mode .news-title { color: #4dabf7; }
+    .dark-mode .news-details { border-top-color: #666; color: #eee; }
     .dark-mode .quiz-header { color: #aaa; }
     .dark-mode rt { color: #aaa; }
     .dark-mode .stats-card { background: #2d2d2d; border-left-color: #007bff;}
@@ -192,9 +188,9 @@
         <li onclick="openSubModal('display-modal')"><span class="icon">🌙</span> 画面表示設定</li>
         <li onclick="openSubModal('sound-modal')"><span class="icon">🎵</span> サウンド設定</li>
         <li onclick="openSubModal('account-modal')"><span class="icon">👤</span> アカウント情報変更</li>
-        <li onclick="forceRefreshData()" style="color:#007bff;"><span class="icon">🔄</span> 全データ再取得 (不具合時)</li>
-        <li onclick="openSubModal('admin-modal')"><span class="icon">🔑</span> 管理者モード</li>
         <li onclick="openSubModal('help-modal')"><span class="icon">📖</span> 使い方説明</li>
+        <li onclick="openSubModal('admin-modal')"><span class="icon">🔑</span> 管理者モード</li>
+        <li onclick="forceRefreshData()" style="color:#007bff;"><span class="icon">🔄</span> 全データ再取得 (不具合時)</li>
         <li onclick="logout()" style="color:#dc3545;"><span class="icon">🚪</span> ログアウト</li>
         <li onclick="openSubModal('delete-modal')" style="color:#dc3545;"><span class="icon">⚠️</span> アカウント削除</li>
       </ul>
@@ -387,7 +383,7 @@
   </div>
 
   <script>
-    const HTML_VERSION = "4.0.3"; 
+    const HTML_VERSION = "4.0.4"; 
     
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); }); }
 
@@ -804,7 +800,6 @@
       }
     }
 
-    // ★修正：ニュース表示部分のHTMLを整理
     function showMenu() {
       sessionStorage.setItem('activeScreen', 'menu'); 
       hideAll(); document.getElementById('menu-screen').classList.remove('hidden');

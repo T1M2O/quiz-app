@@ -52,9 +52,12 @@
     .res-text { font-size: 32px; font-weight: bold; margin-bottom: 20px; }
     .correct-box { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 20px; width: 80%; }
     
+    /* ★修正：お知らせ周りのスタイルを整理してダークモード対応しやすくしました */
     .news-box { text-align: left; background: #fff3cd; border: 1px solid #ffeeba; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; }
-    .news-item { margin-bottom: 4px; color: #555; }
-    .news-date { font-weight: bold; margin-right: 5px; color: #856404; }
+    .news-item { margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #eee; cursor: pointer; color: #555; }
+    .news-date { font-weight: bold; display: block; margin-bottom: 3px; color: #856404; }
+    .news-title { font-weight: bold; color: #007bff; }
+    .news-details { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ccc; color: #444; line-height: 1.4; }
 
     .settings-icon { position: absolute; top: 15px; right: 15px; font-size: 24px; cursor: pointer; z-index: 201; transition: transform 0.3s; }
     .settings-icon:active { transform: rotate(90deg); }
@@ -97,6 +100,7 @@
     #map-container { width: 100%; height: 320px; margin-bottom: 10px; border-radius: 8px; border: 2px solid #ccc; box-sizing: border-box; z-index: 10; background: #aad3df;}
     #map { width: 100%; height: 100%; border-radius: 6px; }
 
+    /* ダークモード用のスタイル */
     body.dark-mode { background-color: #121212; color: #e0e0e0; }
     .dark-mode .card { background: #1e1e1e; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
     .dark-mode input[type="text"], .dark-mode input[type="password"] { background: #2d2d2d; color: #e0e0e0; border-color: #444; }
@@ -106,8 +110,14 @@
     .dark-mode .btn-dummy { background: #2d2d2d; color: #888; border-color: #444; }
     .dark-mode .result-overlay { background: rgba(30, 30, 30, 0.95); }
     .dark-mode .correct-box { background: #2d2d2d; border-color: #444; }
+    
+    /* ★修正：ダークモード時のお知らせ周りの配色を見やすく変更 */
     .dark-mode .news-box { background: #3a3219; border-color: #665111; color: #e0e0e0; }
     .dark-mode .news-item { border-bottom-color: #444; color: #ccc; }
+    .dark-mode .news-date { color: #f39c12; } /* 明るいオレンジ */
+    .dark-mode .news-title { color: #4dabf7; } /* 少し明るい水色 */
+    .dark-mode .news-details { border-top-color: #666; color: #eee; } /* 白系の文字色 */
+    
     .dark-mode .quiz-header { color: #aaa; }
     .dark-mode rt { color: #aaa; }
     .dark-mode .stats-card { background: #2d2d2d; border-left-color: #007bff;}
@@ -308,7 +318,6 @@
     </div>
 
     <button class="btn btn-world" onclick="startGame('world')">🌎 国旗クイズ</button>
-    
     <button class="btn btn-city" onclick="startGame('city')">🏙 市町村クイズ</button>
     <button class="btn btn-tour" onclick="startGame('tourist')">⛩️ 観光地クイズ</button>
     <button class="btn btn-station" onclick="startGame('station')">🚉 鉄道駅クイズ</button>
@@ -378,7 +387,7 @@
   </div>
 
   <script>
-    const HTML_VERSION = "4.0.2"; 
+    const HTML_VERSION = "4.0.3"; 
     
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').then(reg => { reg.update(); }); }
 
@@ -524,7 +533,6 @@
         if (mapType === 'world') {
             map.setView([20.0, 0.0], 2);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 10, minZoom: 1 }).addTo(map);
-            // ★修正：粗い「110m」から、海岸線が綺麗な中解像度「50m」データに変更！
             geojsonUrl = 'https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@5.0.0/geojson/ne_50m_admin_0_countries.geojson';
         } else {
             map.setView([38.0, 137.0], 4.5); 
@@ -796,6 +804,7 @@
       }
     }
 
+    // ★修正：ニュース表示部分のHTMLを整理
     function showMenu() {
       sessionStorage.setItem('activeScreen', 'menu'); 
       hideAll(); document.getElementById('menu-screen').classList.remove('hidden');
@@ -810,11 +819,11 @@
         document.getElementById('news-box').classList.remove('hidden');
         let topHtml = ''; let fullHtml = '';
         appData.news.forEach((n, i) => { 
-          let detHtml = n.details ? `<div id="news-det-top-${i}" class="hidden" style="margin-top:8px; padding-top:8px; border-top:1px dashed #ccc; color:#444; line-height:1.4;">${n.details.replace(/\n/g, '<br>')}</div>` : '';
-          let detHtmlModal = n.details ? `<div id="news-det-mod-${i}" class="hidden" style="margin-top:8px; padding-top:8px; border-top:1px dashed #ccc; color:#444; line-height:1.4;">${n.details.replace(/\n/g, '<br>')}</div>` : '';
+          let detHtml = n.details ? `<div id="news-det-top-${i}" class="hidden news-details">${n.details.replace(/\n/g, '<br>')}</div>` : '';
+          let detHtmlModal = n.details ? `<div id="news-det-mod-${i}" class="hidden news-details">${n.details.replace(/\n/g, '<br>')}</div>` : '';
           
-          if(i < 3) topHtml += `<div class="news-item" style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px; cursor:pointer;" onclick="document.getElementById('news-det-top-${i}').classList.toggle('hidden')"><span class="news-date" style="display:block; margin-bottom:3px;">${n.date}</span><span style="font-weight:bold; color:#007bff;">${n.title}</span>${detHtml}</div>`; 
-          fullHtml += `<div class="news-item" style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px; cursor:pointer;" onclick="document.getElementById('news-det-mod-${i}').classList.toggle('hidden')"><span class="news-date" style="display:block; margin-bottom:3px;">${n.date}</span><span style="font-weight:bold; color:#007bff;">${n.title}</span>${detHtmlModal}</div>`;
+          if(i < 3) topHtml += `<div class="news-item" onclick="document.getElementById('news-det-top-${i}').classList.toggle('hidden')"><span class="news-date">${n.date}</span><span class="news-title">${n.title}</span>${detHtml}</div>`; 
+          fullHtml += `<div class="news-item" onclick="document.getElementById('news-det-mod-${i}').classList.toggle('hidden')"><span class="news-date">${n.date}</span><span class="news-title">${n.title}</span>${detHtmlModal}</div>`;
         });
         document.getElementById('news-list').innerHTML = topHtml; document.getElementById('full-news-list').innerHTML = fullHtml;
       } else { document.getElementById('news-box').classList.add('hidden'); }
